@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
+
 import sys, gzip, math, numpy
 import pysam
 from scipy import stats
@@ -41,7 +43,7 @@ def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
                     if start_pos < 0: start_pos = 0
                     records = merged_control_db.fetch(F[0], start_pos , int(F[1]) + 1 + permissible_range)
                 except Exception as inst:
-                    print >> sys.stderr, "%s: %s" % (type(inst), inst.args)
+                    print("%s: %s" % (type(inst), inst.args), file = sys.stderr)
                     tabixErrorMsg = str(inst.args)
                     tabixErrorFlag = 1
 
@@ -55,7 +57,7 @@ def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
 
             if merged_control_filt_flag: continue
 
-            print >> hout, F[0] + '\t' + str(int(F[1])+1) + '\t' + F[3] + '\t' + F[4]
+            print(F[0] + '\t' + str(int(F[1])+1) + '\t' + F[3] + '\t' + F[4], file = hout)
 
     hout.close()
 
@@ -69,9 +71,9 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
 
     hout = open(output_file, 'w')
 
-    print >> hout, '\t'.join(["Chr", "Pos", "Dir", "Junc_Seq", 
-                              "Num_Tumor_Total_Read", "Num_Tumor_Var_Read", "Num_Control_Total_Read", "Num_Control_Var_Read",
-                              "Minus_Log_Fisher_P_value"])
+    print('\t'.join(["Chr", "Pos", "Dir", "Junc_Seq", 
+                     "Num_Tumor_Total_Read", "Num_Tumor_Var_Read", "Num_Control_Total_Read", "Num_Control_Var_Read",
+                     "Minus_Log_Fisher_P_value"]), file = hout)
 
     with open(input_file, 'r') as hin:
         for line in hin:
@@ -105,8 +107,8 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
 
                 if 10**(-lpvalue) > float(max_fisher_pvalue): continue
 
-            print >> hout, '\t'.join(F[:4]) + '\t' + str(depth_tumor) + '\t' + str(tumor_num) + '\t' + \
-                           str(depth_control) + '\t' + str(control_num) + '\t' + str(lpvalue)
+            print('\t'.join(F[:4]) + '\t' + str(depth_tumor) + '\t' + str(tumor_num) + '\t' + \
+                  str(depth_control) + '\t' + str(control_num) + '\t' + str(lpvalue), file = hout)
 
     hout.close()
 
@@ -128,7 +130,7 @@ def filter_by_base_quality(input_file, output_file, tumor_bam, min_support_num, 
                 records = tumor_bamfile.fetch(F[0], max(int(F[1]) - 1, 0) , int(F[1]) + 1)
             
             except Exception as inst:
-                print >> sys.stderr, "%s: %s" % (type(inst), inst.args)
+                print("%s: %s" % (type(inst), inst.args), file = sys.stderr)
                 tabixErrorMsg = str(inst.args)
                 tabixErrorFlag = 1
 
@@ -193,7 +195,7 @@ def filter_by_base_quality(input_file, output_file, tumor_bam, min_support_num, 
             if numpy.median(list(map(float, key_baseq))) < 20: continue
             if numpy.sort(list(map(float, key_baseq)))[-2] < 30: continue
 
-            print >> hout, F[0] + '\t' + F[1] + '\t' + F[2] + '\t' + F[3]  + '\t' + str(tumor_var_read)
+            print(F[0] + '\t' + F[1] + '\t' + F[2] + '\t' + F[3]  + '\t' + str(tumor_var_read), file = hout)
 
     hin.close()
     hout.close()
@@ -271,7 +273,7 @@ def filter_by_matched_control(input_file, output_file, matched_control_bp_file, 
 
             if use_matched_control and normal_var_read > max_control_num_thres: continue
 
-            print >> hout,  F[0] + '\t' + F[1] + '\t' + F[2] + '\t' + F[3]  + '\t' + F[4] + '\t' + str(normal_var_read)
+            print(F[0] + '\t' + F[1] + '\t' + F[2] + '\t' + F[3]  + '\t' + F[4] + '\t' + str(normal_var_read), file = hout)
 
 
 

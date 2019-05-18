@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
+
 import sys, os, gzip, subprocess
 # from . import parse, filt, contig, classify
 from . import parse
@@ -15,7 +17,7 @@ def parse_main(args):
     hout.close()
 
     if s_ret != 0:
-        print >> sys.stderr, "Error in sorting merged junction file"
+        print("Error in sorting merged junction file", file = sys.stderr)
         sys.exit(1)
 
     hout = open(args.output_file, 'w')
@@ -23,13 +25,13 @@ def parse_main(args):
     hout.close()
 
     if s_ret != 0:
-        print >> sys.stderr, "Error in compression merged junction file"
+        print("Error in compression merged junction file", file = sys.stderr)
         sys.exit(1)
 
 
     s_ret = subprocess.call(["tabix", "-p", "bed", args.output_file])
     if s_ret != 0:
-        print >> sys.stderr, "Error in indexing merged junction file"
+        print("Error in indexing merged junction file", file = sys.stderr)
         sys.exit(1)
 
     subprocess.call(["rm", "-f", args.output_file + ".bp.tmp.txt"])
@@ -56,7 +58,7 @@ def merge_control_main(args):
                     F = line2.rstrip('\n').split('\t')
                     support_num = len(F[7].split(';'))
                     if support_num < args.support_num_thres: continue 
-                    print >> hout, F[0] + '\t' + F[1] + '\t' + F[2] + '\t' + F[3] + '\t' + F[4] + '\t' + str(support_num)
+                    print(F[0] + '\t' + F[1] + '\t' + F[2] + '\t' + F[3] + '\t' + F[4] + '\t' + str(support_num), file = hout)
                 
 
     hout = open(args.output_file + ".sorted.txt", 'w')
@@ -64,7 +66,7 @@ def merge_control_main(args):
     hout.close()
 
     if s_ret != 0:
-        print >> sys.stderr, "Error in sorting merged junction file"
+        print("Error in sorting merged junction file", file = sys.stderr)
         sys.exit(1)
 
 
@@ -79,13 +81,13 @@ def merge_control_main(args):
             if key != temp_key:
                 if temp_key != "":
                     if len(temp_read_num) >= args.sample_num_thres:
-                        print >> hout, temp_key + '\t' + ','.join(temp_read_num)
+                        print(temp_key + '\t' + ','.join(temp_read_num), file = hout)
                 temp_key = key
                 temp_read_num = []
             temp_read_num.append(str(support_num))
 
         if len(temp_read_num) >= args.sample_num_thres:
-            print >> hout, temp_key + '\t' + ','.join(temp_read_num)
+            print(temp_key + '\t' + ','.join(temp_read_num), file = hout)
 
     hout.close()
 
@@ -96,13 +98,13 @@ def merge_control_main(args):
     hout.close()
 
     if s_ret != 0:
-        print >> sys.stderr, "Error in compression merged junction file"
+        print("Error in compression merged junction file", file = sys.stderr)
         sys.exit(1)
 
 
     s_ret = subprocess.call(["tabix", "-p", "bed", args.output_file])
     if s_ret != 0:
-        print >> sys.stderr, "Error in indexing merged junction file"
+        print("Error in indexing merged junction file", file = sys.stderr)
         sys.exit(1)
 
     subprocess.call(["rm", "-f", args.output_file + ".unsorted.txt"])
