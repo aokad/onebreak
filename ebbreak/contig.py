@@ -1,11 +1,10 @@
 #! /usr/bin/env python
 
 import sys, os, math, re, subprocess
-import pysam
-import my_seq
-import swalign
+import pysam, swalign
 import annot_utils.gene, annot_utils.exon
 
+from . import my_seq
 
 def assemble_seq_fml_asm(readid2seq, junc_seq, tmp_file_path):
 

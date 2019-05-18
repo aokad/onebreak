@@ -3,7 +3,7 @@
 import sys, gzip, math, numpy
 import pysam
 from scipy import stats
-import my_seq
+from . import my_seq
 
 def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
                              min_median_mapq, min_max_clip_size, permissible_range):

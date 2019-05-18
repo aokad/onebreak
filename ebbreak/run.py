@@ -1,7 +1,8 @@
 #! /usr/bin/env python
 
 import sys, os, gzip, subprocess
-import parse, filt, contig, classify
+# from . import parse, filt, contig, classify
+from . import parse
 
 def parse_main(args):
 
