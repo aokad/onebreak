@@ -5,10 +5,112 @@ from __future__ import print_function
 import sys, gzip, math, numpy
 import pysam
 from scipy import stats
+from statistics import mean
 from . import my_seq
 
+
+def get_target_bp(target_chr, target_pos, target_dir, target_junc_seq, bamfile):
+
+    total_read_num = 0
+    read_ids = []
+    mapping_quals = []  
+    clipping_sizes = []
+    alignment_sizes = []    
+    juncseq_base_quals = []
+
+    key_seq_size = len(target_junc_seq)
+
+    # maybe add the regional extraction of bam files
+    target_region = target_chr + ':' + target_pos + '-' + target_pos
+    for read in bamfile.fetch(target_chr, int(target_pos) - 1, int(target_pos)):
+
+        # get the flag information
+        flags = format(int(read.flag), "#014b")[:1:-1]
+
+        # skip if not aligned
+        if flags[2] == "1": continue
+
+        # skip supplementary alignment
+        if flags[8] == "1" or flags[11] == "1": continue
+
+        # skip duplicated reads
+        if flags[10] == "1": continue
+
+        # no clipping
+        if len(read.cigar) == 1: continue
+
+        total_read_num = total_read_num + 1
+
+        # get the clipping size in the both side
+        left_clipping = (read.cigar[0][1] if read.cigar[0][0] in [4, 5] else 0)
+        right_clipping = (read.cigar[len(read.cigar) - 1][1] if read.cigar[len(read.cigar) - 1][0] in [4, 5] else 0)
+
+        if target_dir == '+' and right_clipping < 2: continue
+        if target_dir == '-' and left_clipping < 2: continue
+
+        # if left_clipping < min_major_clip_size and right_clipping < min_major_clip_size: continue
+
+        # get the alignment basic information
+        chr_current = bamfile.getrname(read.tid)
+        pos_current = int(read.pos + 1)
+        dir_current = ("-" if flags[4] == "1" else "+")
+
+        # when the right side is clipped...
+        if target_dir == '+':
+            clipLen_current = right_clipping
+            alignmentSize_current = read.alen
+            readLength_current = read.rlen
+            juncChr_current = chr_current
+            juncPos_current = pos_current + alignmentSize_current - 1
+
+            juncDir_current = "+"
+            juncseq_start = readLength_current - clipLen_current
+            juncseq_end = readLength_current - max(clipLen_current - key_seq_size, 0)
+            juncseq = read.seq[juncseq_start:juncseq_end]
+            juncseq_baseq = mean(read.query_qualities[juncseq_start:juncseq_end])
+
+            if str(juncPos_current) != str(target_pos): continue
+            if juncseq != target_junc_seq[:len(juncseq)]: continue
+
+            read_ids.append(read.qname + ("/1" if flags[6] == "1" else "/2"))
+            mapping_quals.append(str(read.mapq))
+            clipping_sizes.append(str(right_clipping))
+            alignment_sizes.append(str(alignmentSize_current))
+            juncseq_base_quals.append(str(juncseq_baseq))
+
+
+        if target_dir == '-':
+
+            clipLen_current = left_clipping
+            alignmentSize_current = read.alen
+            readLength_current = read.rlen
+     
+            juncChr_current = chr_current
+            juncPos_current = pos_current
+            juncDir_current = "-"
+
+            juncseq_end = clipLen_current
+            juncseq_start = max(clipLen_current - key_seq_size, 0)
+            juncseq = my_seq.reverse_complement(read.seq[juncseq_start:juncseq_end])
+            juncseq_baseq = mean(read.query_qualities[juncseq_start:juncseq_end])
+
+            if str(juncPos_current) != str(target_pos): continue
+            if juncseq != target_junc_seq[:len(juncseq)]: continue
+
+            read_ids.append(read.qname + ("/1" if flags[6] == "1" else "/2"))
+            mapping_quals.append(str(read.mapq))
+            clipping_sizes.append(str(left_clipping))
+            alignment_sizes.append(str(alignmentSize_current))
+            juncseq_base_quals.append(str(juncseq_baseq))
+
+
+    return([total_read_num, ';'.join(read_ids), ';'.join(mapping_quals), ';'.join(clipping_sizes), ';'.join(alignment_sizes), ';'.join(juncseq_base_quals)])
+
+
+
+
 def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
-                             min_median_mapq, min_max_clip_size, permissible_range):
+                             min_median_mapq, min_max_clip_size, min_second_juncseq_baseq, permissible_range):
 
     """
     filter by base quality (1st step)
@@ -27,11 +129,12 @@ def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
             base_qualities = [float(x) for x in F[9].split(';')]
 
             # remove breakpoint if supporting read does not meet the criteria below
-            if len(mapqs) == 1: continue
+            # if len(mapqs) == 1: continue
+            if len(list(set(clip_sizes))) == 1: continue
             if numpy.median(mapqs) < min_median_mapq: continue
             if max(clip_sizes) < min_max_clip_size: continue
             #if numpy.median(base_qualities) < 20: continue
-            if numpy.sort(base_qualities)[-2] < 30: continue
+            if numpy.sort(base_qualities)[-2] < min_second_juncseq_baseq: continue
 
             # filtering using merged control file
             merged_control_filt_flag = False 
@@ -57,13 +160,15 @@ def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
 
             if merged_control_filt_flag: continue
 
-            print(F[0] + '\t' + str(int(F[1])+1) + '\t' + F[3] + '\t' + F[4], file = hout)
+            # print(F[0] + '\t' + str(int(F[1])+1) + '\t' + F[3] + '\t' + F[4], file = hout)
+            print('\t'.join(F), file = hout)
 
     hout.close()
 
 
 
-def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_bam, tumor_AF_thres, control_AF_thres, max_fisher_pvalue):
+def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_bam, min_variant_num_tumor, min_VAF_tumor,
+                          max_variant_num_control, max_VAF_control, max_fisher_pvalue):
 
     """
     filtering by allele frequency
@@ -75,40 +180,54 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
                      "Num_Tumor_Total_Read", "Num_Tumor_Var_Read", "Num_Control_Total_Read", "Num_Control_Var_Read",
                      "Minus_Log_Fisher_P_value"]), file = hout)
 
+    tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
+    matched_control_bam_bh = pysam.Samfile(matched_control_bam, "rb")
+
+
     with open(input_file, 'r') as hin:
         for line in hin:
             F = line.rstrip('\n').split('\t')
-            tumor_num = int(F[4])
-            control_num = int(F[5])
-            region = F[0] + ':' + F[1] + '-' + F[1]
 
-            depth_tumor_info = pysam.depth(tumor_bam, "-r", region)
-            depth_tumor = int(depth_tumor_info.rstrip('\n').split('\t')[2])
-            AF_tumor = float(tumor_num) / depth_tumor
-            if AF_tumor < tumor_AF_thres: continue
+            total_num_tumor, read_ids_tumor, mapping_quals_tumor, clipping_sizes_tumor, alignment_sizes_tumor, juncseq_base_quals_tumor = get_target_bp(F[0], F[2], F[3], F[4], tumor_bam_bh)
+            variant_num_tumor = len(read_ids_tumor.split(';'))
+            if variant_num_tumor < min_variant_num_tumor: continue    
+
+            if total_num_tumor == 0:
+                print("total_num_tumor is 0", file = sys.stderr)
+                sys.exit(1)
+        
+    
+            VAF_tumor = float(variant_num_tumor) / total_num_tumor
+            if VAF_tumor < min_VAF_tumor: continue
+
 
             if matched_control_bam != "":
-                depth_control_info = pysam.depth(matched_control_bam, "-r", region)
-                depth_control = int(depth_control_info.rstrip('\n').split('\t')[2]) if len(depth_control_info) != 0 else 0
-                control_AF = float(control_num) / depth_control if depth_control > 0 else 1.0
+                total_num_control, read_ids_control, mapping_quals_control, clipping_sizes_control, alignment_sizes_control, juncseq_base_quals_control = get_target_bp(F[0], F[2], F[3], F[4], matched_control_bam_bh)
+                variant_num_control = len(read_ids_control.split(';')) if read_ids_control != '' else 0
+                VAF_control = float(variant_num_control) / total_num_control if total_num_control > 0 else 1.0
 
             else:
-                depth_control = "---"
-                control_AF = "---"
+                variant_read_num_control = "---"
+                total_read_num_control = "---"
+                VAF_control = "---"
 
-            if control_AF != "---" and control_AF > control_AF_thres: continue 
+            if variant_num_control > max_variant_num_control: continue
+            if VAF_control != "---" and VAF_control > max_VAF_control: continue 
 
             lpvalue = "---"
-            if control_AF != "":
-                oddsratio, pvalue = stats.fisher_exact([[depth_tumor - tumor_num, tumor_num], [depth_control - control_num, control_num]], 'less')
+            if VAF_control != "":
+                oddsratio, pvalue = stats.fisher_exact([[total_num_tumor - variant_num_tumor, variant_num_tumor], [total_num_control - variant_num_control, variant_num_control]], 'less')
                 if pvalue < 1e-100: pvalue = 1e-100
                 lpvalue = (- math.log(pvalue, 10) if pvalue < 1 else 0)
                 lpvalue = round(lpvalue, 4) 
 
                 if 10**(-lpvalue) > float(max_fisher_pvalue): continue
 
-            print('\t'.join(F[:4]) + '\t' + str(depth_tumor) + '\t' + str(tumor_num) + '\t' + \
-                  str(depth_control) + '\t' + str(control_num) + '\t' + str(lpvalue), file = hout)
+            if VAF_tumor != "---": VAF_tumor = str(round(VAF_tumor, 4))
+            if VAF_control != "---": VAF_control = str(round(VAF_control, 4))
+
+            print('\t'.join(F[:5]) + '\t' + str(total_num_tumor) + '\t' + str(variant_num_tumor) + '\t' + VAF_tumor + '\t' + \
+                  str(total_num_control) + '\t' + str(variant_num_control) + '\t' + VAF_control + '\t' + str(lpvalue), file = hout)
 
     hout.close()
 
@@ -276,4 +395,116 @@ def filter_by_matched_control(input_file, output_file, matched_control_bp_file, 
             print(F[0] + '\t' + F[1] + '\t' + F[2] + '\t' + F[3]  + '\t' + F[4] + '\t' + str(normal_var_read), file = hout)
 
 
+"""
+def get_target_bp(target_chr, target_pos, target_dir, target_junc_seq, bamfile):
 
+    total_read_num = 0
+    read_ids = []
+    mapping_quals = []  
+    clipping_sizes = []
+    alignment_sizes = []    
+    juncseq_base_quals = []
+
+    key_seq_size = len(target_junc_seq)
+
+    # maybe add the regional extraction of bam files
+    target_region = target_chr + ':' + target_pos + '-' + target_pos
+    for read in bamfile.fetch(target_chr, int(target_pos) - 1, int(target_pos)):
+
+        # get the flag information
+        flags = format(int(read.flag), "#014b")[:1:-1]
+
+        # skip if not aligned
+        if flags[2] == "1": continue
+
+        # skip supplementary alignment
+        if flags[8] == "1" or flags[11] == "1": continue
+
+        # skip duplicated reads
+        if flags[10] == "1": continue
+
+        # no clipping
+        if len(read.cigar) == 1: continue
+
+        total_read_num = total_read_num + 1
+
+        # get the clipping size in the both side
+        left_clipping = (read.cigar[0][1] if read.cigar[0][0] in [4, 5] else 0)
+        right_clipping = (read.cigar[len(read.cigar) - 1][1] if read.cigar[len(read.cigar) - 1][0] in [4, 5] else 0)
+
+        if target_dir == '+' and right_clipping < 2: continue
+        if target_dir == '-' and left_clipping < 2: continue
+
+        # if left_clipping < min_major_clip_size and right_clipping < min_major_clip_size: continue
+
+        # get the alignment basic information
+        chr_current = bamfile.getrname(read.tid)
+        pos_current = int(read.pos + 1)
+        dir_current = ("-" if flags[4] == "1" else "+")
+
+        # when the right side is clipped...
+        if target_dir == '+':
+        # if right_clipping >= min_major_clip_size:
+            clipLen_current = right_clipping
+            alignmentSize_current = read.alen
+            readLength_current = read.rlen
+            juncChr_current = chr_current
+            juncPos_current = pos_current + alignmentSize_current - 1
+
+            juncDir_current = "+"
+            juncseq_start = readLength_current - clipLen_current
+            juncseq_end = readLength_current - max(clipLen_current - key_seq_size, 0)
+            juncseq = read.seq[juncseq_start:juncseq_end]
+            juncseq_baseq = mean(read.query_qualities[juncseq_start:juncseq_end])
+
+            if str(juncPos_current) != str(target_pos): continue
+
+            if len(juncseq) < 8:
+                import pdb; pdb.set_trace()
+
+            if juncseq != target_junc_seq[:len(juncseq)]: continue
+
+            read_ids.append(read.qname + ("/1" if flags[6] == "1" else "/2"))
+            mapping_quals.append(str(read.mapq))
+            clipping_sizes.append(str(right_clipping))
+            alignment_sizes.append(str(alignmentSize_current))
+            juncseq_base_quals.append(str(juncseq_baseq))
+
+            # read_infos.append('\t'.join([read.qname + ("/1" if flags[6] == "1" else "/2"), str(read.mapq), str(right_clipping), str(alignmentSize_current), str(juncseq_baseq)]))
+            # print('\t'.join([juncChr_current, str(juncPos_current-1), str(juncPos_current), juncDir_current, juncseq, 
+            #       read.qname + ("/1" if flags[6] == "1" else "/2"), str(read.mapq), str(right_clipping), str(alignmentSize_current), str(juncseq_baseq)]), file = hout)
+
+        if target_dir == '-':
+        # if left_clipping >= min_major_clip_size:
+
+            clipLen_current = left_clipping
+            alignmentSize_current = read.alen
+            readLength_current = read.rlen
+     
+            juncChr_current = chr_current
+            juncPos_current = pos_current
+            juncDir_current = "-"
+
+            juncseq_end = clipLen_current
+            juncseq_start = max(clipLen_current - key_seq_size, 0)
+            juncseq = my_seq.reverse_complement(read.seq[juncseq_start:juncseq_end])
+            juncseq_baseq = mean(read.query_qualities[juncseq_start:juncseq_end])
+
+            if str(juncPos_current) != str(target_pos): continue
+            if len(juncseq) < 8:
+                import pdb; pdb.set_trace()
+            if juncseq != target_junc_seq[:len(juncseq)]: continue
+
+            read_ids.append(read.qname + ("/1" if flags[6] == "1" else "/2"))
+            mapping_quals.append(str(read.mapq))
+            clipping_sizes.append(str(left_clipping))
+            alignment_sizes.append(str(alignmentSize_current))
+            juncseq_base_quals.append(str(juncseq_baseq))
+
+            # read_infos.append('\t'.join([read.qname + ("/1" if flags[6] == "1" else "/2"), str(read.mapq), str(left_clipping), str(alignmentSize_current), str(juncseq_baseq)]))
+            # print('\t'.join([juncChr_current, str(juncPos_current-1), str(juncPos_current), juncDir_current, juncseq, 
+            #       read.qname + ("/1" if flags[6] == "1" else "/2"), str(read.mapq), str(left_clipping), str(alignmentSize_current), str(juncseq_baseq)]), file = hout)
+
+
+    return([total_read_num, ';'.join(read_ids), ';'.join(mapping_quals), ';'.join(clipping_sizes), ';'.join(alignment_sizes), ';'.join(juncseq_base_quals)])
+"""

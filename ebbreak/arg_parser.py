@@ -89,16 +89,19 @@ def create_parser():
 
     # filt_parser.add_argument("--debug", default = False, action = 'store_true', help = "keep intermediate files")
 
-    filt.add_argument("--min_tumor_num_thres", type = int, default = 3,
+    filt.add_argument("--min_second_juncseq_baseq", type = int, default = 30,
+                      help = "threshould of the second juncseq base quality")
+
+    filt.add_argument("--min_variant_num_tumor", type = int, default = 3,
                       help = "minimum required number of supporting read (default: %(default)s)")
 
-    filt.add_argument("--min_tumor_allele_freq", type = float, default = 0.03,
+    filt.add_argument("--min_VAF_tumor", type = float, default = 0.07,
                       help = "minimum required allele frequency of the tumor sample (default: %(default)s)")
 
-    filt.add_argument("--max_control_num_thres", type = int, default = 1,
+    filt.add_argument("--max_variant_num_control", type = int, default = 1,
                       help = "maximum allowed number of reads in matched control sample (default: %(default)s)")
 
-    filt.add_argument("--max_control_allele_freq", type = float, default = 0.03,
+    filt.add_argument("--max_VAF_control", type = float, default = 0.02,
                       help = "maximum allowed allele frequency of matched control sample (default: %(default)s)")
 
     filt.add_argument("--max_fisher_pvalue", type = float, default = 0.10,
