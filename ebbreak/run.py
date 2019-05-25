@@ -117,6 +117,10 @@ def filt_main(args):
     # filt.filter_by_merged_control(args.tumor_bp_file, args.output_file + ".tmp.filt1.txt", args.merged_control_file,
     #                               args.min_median_mapq, args.min_max_clip_size, args.min_second_juncseq_baseq, args.permissible_range)
 
+    filt.filter_by_peakedness(args.output_file + ".tmp.filt1.txt", args.tumor_bp_file, args.output_file + ".tmp.filt2.txt")
+
+    filt.filter_by_matched_control_local_check(args.output_file + ".tmp.filt2.txt", args.matched_control_bp_file, args.output_file + ".tmp.filt3.txt")
+
     """
     # filt.filter_by_base_quality(args.output_file + ".tmp.filt1.txt", args.output_file + ".tmp.filt2.txt" , args.tumor_bam, args.min_tumor_num_thres, 
     #                               args.permissible_range)
@@ -125,7 +129,7 @@ def filt_main(args):
     #                                args.matched_control_bam, args.max_control_num_thres, args.permissible_range)
     """
 
-    filt.filter_by_allele_freq(args.output_file + ".tmp.filt1.txt", args.output_file, 
+    filt.filter_by_allele_freq(args.output_file + ".tmp.filt3.txt", args.output_file, 
                                args.tumor_bam, args.matched_control_bam, args.min_variant_num_tumor, args.min_VAF_tumor, 
                                args.max_variant_num_control, args.max_VAF_control, args.max_fisher_pvalue)
 

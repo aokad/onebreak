@@ -37,7 +37,7 @@ def get_target_bp(target_chr, target_pos, target_dir, target_junc_seq, bamfile):
         if flags[10] == "1": continue
 
         # no clipping
-        if len(read.cigar) == 1: continue
+        # if len(read.cigar) == 1: continue
 
         total_read_num = total_read_num + 1
 
@@ -108,7 +108,95 @@ def get_target_bp(target_chr, target_pos, target_dir, target_junc_seq, bamfile):
 
 
 
+def filter_by_peakedness(input_file, tumor_bp_file, output_file, check_range = 10, peaked_ratio_thres = 0.5):
+    
+    tumor_bp_db = pysam.TabixFile(tumor_bp_file)
+    hout = open(output_file, 'w')
+    with open(input_file, 'r') as hin:
+        for line in hin:
+            F = line.rstrip('\n').split('\t')
 
+            tchr, tpos, tdir, tjuncseq = F[0], F[2], F[3], F[4]
+            tread_num = len(F[6].split(';'))
+
+            nonpeakedness_flag = False 
+            tabixErrorFlag = 0
+            try:
+                records = tumor_bp_db.fetch(tchr, max(0, int(tpos) - check_range), int(tpos) + check_range)
+
+            except Exception as inst:
+                print("%s: %s" % (type(inst), inst.args), file = sys.stderr)
+                tabixErrorMsg = str(inst.args)
+                tabixErrorFlag = 1
+
+            if tabixErrorFlag == 0:
+                total_read_num = 0
+                for record_line in records:
+                    record = record_line.split('\t')
+                    # ignore the bp with the opposite direction
+                    if record[3] != tdir: continue
+                    # skip the target bp
+                    # if record[2] == tpos and record[3] == tdir and record[4] == tjuncseq: continue
+                   
+                    # import pdb; pdb.set_trace() 
+                    cread_num = len(record[6].split(';'))
+                    total_read_num = total_read_num + cread_num
+
+                # if tpos in ["158512141", "182899691", "186952894"]:
+                #     import pdb; pdb.set_trace()
+    
+                peaked_ratio = float(tread_num) / total_read_num
+                if peaked_ratio < peaked_ratio_thres: nonpeakedness_flag = True
+                
+
+            # print("check")
+            if nonpeakedness_flag: continue
+            # print('\t'.join(F))
+            print('\t'.join(F) + '\t' + str(round(peaked_ratio, 3)), file = hout)
+
+    hout.close() 
+
+
+def filter_by_matched_control_local_check(input_file, control_bp_file, output_file, check_range = 10, local_total_read_num_thres = 5):
+    
+    use_matched_control = True if control_bp_file != "" else False
+    if use_matched_control: control_bp_db = pysam.TabixFile(control_bp_file)
+
+    hout = open(output_file, 'w')
+    with open(input_file, 'r') as hin:
+        for line in hin:
+            F = line.rstrip('\n').split('\t')
+
+            tchr, tpos, tdir, tjuncseq = F[0], F[2], F[3], F[4]
+            tread_num = len(F[6].split(';'))
+
+            matched_control_local_check = False
+            if use_matched_control: 
+
+                tabixErrorFlag = 0
+                try:
+                    records = control_bp_db.fetch(tchr, max(0, int(tpos) - check_range), int(tpos) + check_range)
+
+                except Exception as inst:
+                    print("%s: %s" % (type(inst), inst.args), file = sys.stderr)
+                    tabixErrorMsg = str(inst.args)
+                    tabixErrorFlag = 1
+
+                total_read_num = 0
+                if tabixErrorFlag == 0:
+                    for record_line in records:
+                        record = record_line.split('\t')
+                        cread_num = len(record[6].split(';'))
+                        total_read_num = total_read_num + cread_num
+
+                if total_read_num >= local_total_read_num_thres: matched_control_local_check = True
+
+            if matched_control_local_check: continue
+            print('\t'.join(F) + '\t' + str(total_read_num), file = hout)
+
+    hout.close() 
+
+ 
 def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
                              min_median_mapq, min_max_clip_size, min_second_juncseq_baseq, permissible_range):
 
@@ -187,7 +275,7 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
     with open(input_file, 'r') as hin:
         for line in hin:
             F = line.rstrip('\n').split('\t')
-
+            
             total_num_tumor, read_ids_tumor, mapping_quals_tumor, clipping_sizes_tumor, alignment_sizes_tumor, juncseq_base_quals_tumor = get_target_bp(F[0], F[2], F[3], F[4], tumor_bam_bh)
             variant_num_tumor = len(read_ids_tumor.split(';'))
             if variant_num_tumor < min_variant_num_tumor: continue    
@@ -227,7 +315,7 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
             if VAF_control != "---": VAF_control = str(round(VAF_control, 4))
 
             print('\t'.join(F[:5]) + '\t' + str(total_num_tumor) + '\t' + str(variant_num_tumor) + '\t' + VAF_tumor + '\t' + \
-                  str(total_num_control) + '\t' + str(variant_num_control) + '\t' + VAF_control + '\t' + str(lpvalue), file = hout)
+                  str(total_num_control) + '\t' + str(variant_num_control) + '\t' + VAF_control + '\t' + str(lpvalue) + '\t' + F[10] + '\t' + F[11], file = hout)
 
     hout.close()
 
