@@ -17,6 +17,7 @@ def get_target_bp(target_chr, target_pos, target_dir, target_junc_seq, bamfile):
     clipping_sizes = []
     alignment_sizes = []    
     juncseq_base_quals = []
+    seq = []
 
     key_seq_size = len(target_junc_seq)
 
@@ -78,7 +79,6 @@ def get_target_bp(target_chr, target_pos, target_dir, target_junc_seq, bamfile):
             alignment_sizes.append(str(alignmentSize_current))
             juncseq_base_quals.append(str(juncseq_baseq))
 
-
         if target_dir == '-':
 
             clipLen_current = left_clipping
@@ -102,7 +102,6 @@ def get_target_bp(target_chr, target_pos, target_dir, target_junc_seq, bamfile):
             clipping_sizes.append(str(left_clipping))
             alignment_sizes.append(str(alignmentSize_current))
             juncseq_base_quals.append(str(juncseq_baseq))
-
 
     return([total_read_num, ';'.join(read_ids), ';'.join(mapping_quals), ';'.join(clipping_sizes), ';'.join(alignment_sizes), ';'.join(juncseq_base_quals)])
 
@@ -138,13 +137,9 @@ def filter_by_peakedness(input_file, tumor_bp_file, output_file, check_range = 1
                     # skip the target bp
                     # if record[2] == tpos and record[3] == tdir and record[4] == tjuncseq: continue
                    
-                    # import pdb; pdb.set_trace() 
                     cread_num = len(record[6].split(';'))
                     total_read_num = total_read_num + cread_num
 
-                # if tpos in ["158512141", "182899691", "186952894"]:
-                #     import pdb; pdb.set_trace()
-    
                 peaked_ratio = float(tread_num) / total_read_num
                 if peaked_ratio < peaked_ratio_thres: nonpeakedness_flag = True
                 
@@ -266,7 +261,7 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
 
     print('\t'.join(["Chr", "Pos", "Dir", "Junc_Seq", 
                      "Num_Tumor_Total_Read", "Num_Tumor_Var_Read", "Num_Control_Total_Read", "Num_Control_Var_Read",
-                     "Minus_Log_Fisher_P_value"]), file = hout)
+                     "Minus_Log_Fisher_P_value", "Peaked_Ratio", "NUM_Local_Control_Total_Read"]), file = hout)
 
     tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
     matched_control_bam_bh = pysam.Samfile(matched_control_bam, "rb")
@@ -275,7 +270,10 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
     with open(input_file, 'r') as hin:
         for line in hin:
             F = line.rstrip('\n').split('\t')
-            
+           
+            # if F[2] == "151727029":
+            #     import pdb; pdb.set_trace()
+ 
             total_num_tumor, read_ids_tumor, mapping_quals_tumor, clipping_sizes_tumor, alignment_sizes_tumor, juncseq_base_quals_tumor = get_target_bp(F[0], F[2], F[3], F[4], tumor_bam_bh)
             variant_num_tumor = len(read_ids_tumor.split(';'))
             if variant_num_tumor < min_variant_num_tumor: continue    
@@ -314,7 +312,7 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
             if VAF_tumor != "---": VAF_tumor = str(round(VAF_tumor, 4))
             if VAF_control != "---": VAF_control = str(round(VAF_control, 4))
 
-            print('\t'.join(F[:5]) + '\t' + str(total_num_tumor) + '\t' + str(variant_num_tumor) + '\t' + VAF_tumor + '\t' + \
+            print('\t'.join([F[0], F[2], F[3], F[4]]) + '\t' + str(total_num_tumor) + '\t' + str(variant_num_tumor) + '\t' + VAF_tumor + '\t' + \
                   str(total_num_control) + '\t' + str(variant_num_control) + '\t' + VAF_control + '\t' + str(lpvalue) + '\t' + F[10] + '\t' + F[11], file = hout)
 
     hout.close()
