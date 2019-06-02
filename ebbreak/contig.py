@@ -32,6 +32,7 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path):
  
     line_num = 0
     temp_contig = ""
+    temp_contig_all = ""
     with open(tmp_file_path + ".tmp3.assemble_output.fq", 'r') as hin:
         for line in hin:
             line_num = line_num + 1
@@ -41,12 +42,16 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path):
                 aln_1 = sw.align(tseq, pre_juncseq)
                 if aln_1.score >= 35:
                     ttcontig = tseq[aln_1.r_end:]
-                    if ttcontig[:8] == post_juncseq and len(ttcontig) > len(temp_contig): temp_contig = ttcontig
-                
+                    if ttcontig[:8] == post_juncseq and len(ttcontig) > len(temp_contig): 
+                        temp_contig = ttcontig
+                        temp_contig_all = tseq
+
                 aln_2 = sw.align(tseq, my_seq.reverse_complement(pre_juncseq))
                 if aln_2.score >= 35:
                     ttcontig = my_seq.reverse_complement(tseq[:aln_2.r_pos])
-                    if ttcontig[:8] == post_juncseq and len(ttcontig) > len(temp_contig): temp_contig = ttcontig
+                    if ttcontig[:8] == post_juncseq and len(ttcontig) > len(temp_contig): 
+                        temp_contig = ttcontig
+                        temp_contig_all = my_seq.reverse_complement(tseq)            
 
     """
     line_num = 0
@@ -95,7 +100,7 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path):
     subprocess.call(["rm", "-rf", tmp_file_path + ".tmp3.assemble_input.fa"])
     subprocess.call(["rm", "-rf", tmp_file_path + ".tmp3.assemble_output.fq"])
 
-    return temp_contig
+    return [temp_contig, temp_contig_all]
 
 
 def generate_contig(input_file, output_file, tumor_bp_file, tumor_bam, reference_genome, min_contig_length, swalign_length, swalign_score):
@@ -143,6 +148,7 @@ def generate_contig(input_file, output_file, tumor_bp_file, tumor_bam, reference
     temp_id2seq = {}
     temp_junc_seq = ""
     key2contig = {}
+    key2contig_all = {}
     with open(output_file + ".tmp2.contig.sorted") as hin:
         for line in hin:
             F = line.rstrip('\n').split('\t')
@@ -150,7 +156,7 @@ def generate_contig(input_file, output_file, tumor_bp_file, tumor_bam, reference
                 if len(temp_id2seq) > 0:
                     print(temp_key)
                     tchr, tpos, tdir, tjuncseq = temp_key.split(',')
-                    key2contig[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file)
+                    key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file)
 
                 temp_key = F[0]
                 temp_id2seq = {}
@@ -164,7 +170,7 @@ def generate_contig(input_file, output_file, tumor_bp_file, tumor_bam, reference
 
         if len(temp_id2seq) > 0:
             tchr, tpos, tdir, tjuncseq = temp_key.split(',') 
-            key2contig[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file)
+            key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file)
 
 
     hout = open(output_file, 'w')
@@ -175,11 +181,12 @@ def generate_contig(input_file, output_file, tumor_bp_file, tumor_bam, reference
 
             if key not in key2contig: continue
             contig = key2contig[key]
+            contig_all = key2contig_all[key]
             if len(contig) < min_contig_length: continue
             # if contig[:8] != F[3][:8]: continue
 
             
-            print('\t'.join(F) + '\t' + contig, file = hout)
+            print('\t'.join(F) + '\t' + contig + '\t' + contig_all, file = hout)
 
     hout.close()
 
