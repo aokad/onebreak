@@ -260,7 +260,7 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
     hout = open(output_file, 'w')
 
     print('\t'.join(["Chr", "Pos", "Dir", "Junc_Seq", 
-                     "Num_Tumor_Total_Read", "Num_Tumor_Var_Read", "Num_Control_Total_Read", "Num_Control_Var_Read",
+                     "Num_Tumor_Total_Read", "Num_Tumor_Var_Read", "VAF_Tumor", "Num_Control_Total_Read", "Num_Control_Var_Read", "VAF_Control",
                      "Minus_Log_Fisher_P_value", "Peaked_Ratio", "NUM_Local_Control_Total_Read"]), file = hout)
 
     tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
