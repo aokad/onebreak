@@ -170,6 +170,26 @@ def create_parser():
     #               help = "threshould of minimum Waterman-Smith alignment score (default: %(default)s)")
 
     contig.set_defaults(func = contig_main)
+
+    ####################
+    # long_read_validate
+    long_read_validate = subparsers.add_parser("long_read_validate",
+                                               help = "validate break points using long read sequence data")
+
+    long_read_validate.add_argument("contig_result_file", metavar = "contig_result_file", type = str,
+                                    help = "path to contig function result file")
+
+    long_read_validate.add_argument("output_file", metavar = "output_file", type = str,
+                                    help = "path to output file")
+ 
+    long_read_validate.add_argument("tumor_bam", metavar = "tumor.bam", type = str,
+                                    help = "path to tumor bam file")
+
+    long_read_validate.add_argument("--control_bam", metavar = "control.bam", type = str, default = None,
+                                    help = "path to control bam file")
+
+    long_read_validate.set_defaults(func = long_read_validate_main)
+
     ####################
     #classify
     classify = subparsers.add_parser("classify",

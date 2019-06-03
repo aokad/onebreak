@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import sys, os, gzip, subprocess
 # from . import parse, filt, contig, classify
-from . import parse, filt, contig
+from . import parse, filt, contig, long_read_validate
 
 def parse_main(args):
 
@@ -114,14 +114,12 @@ def merge_control_main(args):
 
 def filt_main(args):
 
-    """
     filt.filter_by_merged_control(args.tumor_bp_file, args.output_file + ".tmp.filt1.txt", args.merged_control_file,
                                   args.min_median_mapq, args.min_max_clip_size, args.min_second_juncseq_baseq, args.permissible_range)
 
     filt.filter_by_peakedness(args.output_file + ".tmp.filt1.txt", args.tumor_bp_file, args.output_file + ".tmp.filt2.txt")
 
     filt.filter_by_matched_control_local_check(args.output_file + ".tmp.filt2.txt", args.matched_control_bp_file, args.output_file + ".tmp.filt3.txt")
-    """
 
     filt.filter_by_allele_freq(args.output_file + ".tmp.filt3.txt", args.output_file, 
                                args.tumor_bam, args.matched_control_bam, args.min_variant_num_tumor, args.min_VAF_tumor, 
@@ -132,9 +130,14 @@ def filt_main(args):
     # subprocess.call(["rm", args.output_file + ".tmp.filt3.txt"])
 
 
+def long_read_validate_main(args):
+
+    long_read_validate.add_long_read_validate(args.contig_result_file, args.output_file, args.tumor_bam, args.control_bam)
+
+
 def contig_main(args):
 
-    contig.generate_contig(args.tumor_bp_filt_file, args.output_file + ".tmp.filt4.txt", 
+    contig.generate_contig(args.tumor_bp_filt_file, args.output_file,
                            args.tumor_bam, args.reference_genome, args.min_contig_length)
 
     # contig.alignment_contig(args.tumor_bp_filt_file, args.output_file + ".tmp.filt4.txt", args.output_file, 

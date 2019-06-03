@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 from __future__ import print_function
-import sys, os, tempfile, subprocess
+import sys, os, tempfile, subprocess, shutil
 import pysam
 
 from .pyssw import *
@@ -192,10 +192,44 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
             # print(supporting_reads)
             key2sread_count = len(supporting_reads)
 
+    shutil.rmtree(tmp_dir)
+
     return(key2sread_count)
 
 
 
+def add_long_read_validate(input_file, output_file, tumor_bam_file, control_bam_file = None):
+
+    key2sread_count_tumor = long_read_validate_by_alignment(input_file, output_file, tumor_bam_file)
+
+    if control_bam_file is not None:
+        key2sread_count_control = long_read_validate_by_alignment(input_file, output_file, control_bam_file)
+
+    hout = open(output_file, 'w')
+    with open(input_file, 'r') as hin:
+
+        header = hin.readline().rstrip('\n').split('\t')
+        if control_bam_file is not None:
+            print(header + '\t' + "Long_Read_Supporting_Read_Num_Tumor" + '\t' + "Long_Read_Supporting_Read_Num_Control")
+        else:
+            print(header + '\t' + "Long_Read_Supporting_Read_Num_Tumor")
+
+        for line in hin:
+            F = line.rstrip('\n').split('\t')
+            key = ','.join(F[:4])
+
+            sread_count_tumor = key2sread_count_tumor[key] if key in key2sread_count_tumor else 0
+
+            if control_bam_file is not None:
+                sread_count_control = key2sread_count_control[key] if key in key2sread_count_control else 0
+
+            if control_bam_file is not None:
+                print('\t'.join(F) + '\t' + str(sread_count_tumor) + '\t' + str(sread_count_control))
+            else:
+                print('\t'.join(F) + '\t' + str(sread_count_tumor))
+
+    hout.close()
+ 
     """
     hout = open(output_file, 'w')
     with open(input_file, 'r') as hin:

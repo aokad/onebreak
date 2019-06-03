@@ -15,7 +15,7 @@ import timeit as ti
 import gzip
 import math
 
-import ssw_lib
+from . import ssw_lib
 
 if sys.version_info.major == 2:
     range = xrange

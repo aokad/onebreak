@@ -62,6 +62,7 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, swalign_s
 
 def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_contig_length, swalign_length = 20, swalign_score = 35):
 
+    """
     tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
     
     readid2key = {}
@@ -97,7 +98,7 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
     hout = open(output_file + ".tmp2.contig.sorted", 'w')
     subprocess.call(["sort", "-k1,1", output_file + ".tmp2.contig.unsorted"], stdout = hout)
     hout.close()
-
+    """
 
     temp_key = ""
     temp_id2seq = {}
@@ -133,7 +134,7 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
         for line in hin:
             F = line.rstrip('\n').split('\t')    
             if F[0] == "Chr" and F[1] == "Pos":
-                print('\t'.join(F) + '\t' + "Contig_Post_BP", + '\t' + "Contig_All")
+                print('\t'.join(F) + '\t' + "Contig_Post_BP" + '\t' + "Contig_All", file = hout)
                 continue
 
             key = ','.join(F[:4])
