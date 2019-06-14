@@ -105,6 +105,7 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
     with open(input_file, 'r') as hin:
         for line in hin:
             F = line.rstrip('\n').split('\t')               
+            if F[0] == "Chr": continue # header
             tchr, tpos, tdir, tjuncseq = F[0], int(F[1]), F[2], F[3]
             key = ','.join([tchr, str(tpos), tdir, tjuncseq])
             for read in bam_ps.fetch(tchr, tpos - 100, tpos + 100):
@@ -141,13 +142,21 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
 
     key2contig = {}
     with open(input_file, 'r') as hin:
+
+        header = hin.readline().rstrip('\n').split('\t')
+        header2ind = {}
+        for (i, cname) in enumerate(header):
+            header2ind[cname] = i
+
         for line in hin:
             F = line.rstrip('\n').split('\t')
             tchr, tpos, tdir, tjuncseq = F[0], int(F[1]), F[2], F[3]
             key = ','.join([tchr, str(tpos), tdir, tjuncseq])
-            post_contig = F[13]
-            all_contig = F[14]
-            pre_contig = F[14][:(len(F[14]) - len(F[13]))]
+
+            post_contig = F[header2ind["Contig_Post_BP"]]
+            all_contig = F[header2ind["Contig_All"]]
+            pre_contig = F[header2ind["Contig_All"]][:(len(F[header2ind["Contig_All"]]) - len(F[header2ind["Contig_Post_BP"]]))]
+
             if len(pre_contig) > len(post_contig):
                 proc_contig = pre_contig[-len(post_contig):] + post_contig
             else:
@@ -158,12 +167,14 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
 
     tmp_dir = tempfile.mkdtemp()
     # tmp_dir = "tmp"
-    os.makedirs(tmp_dir)
+    # os.makedirs(tmp_dir)
 
     temp_key = ""
     temp_id2seq = {}
     temp_junc_seq = ""
+    temp_total_read_count = 0
     key2sread_count = {}
+    key2sread_count_all = {}
     with open(output_file + ".tmp3.query_seq.sorted") as hin:
         for line in hin:
             F = line.rstrip('\n').split('\t')
@@ -176,57 +187,64 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
                     print(temp_key)
                     # print(len(key2contig[temp_key]))
                     supporting_reads = ssw_check(tmp_dir + '/' + temp_key + ".query", tmp_dir + '/' + temp_key + ".target")
-                    key2sread_count = len(supporting_reads)
+                    key2sread_count[temp_key] = len(supporting_reads)
+                    key2sread_count_all[temp_key] = temp_total_read_count
                     # tchr, tpos, tdir, tjuncseq = temp_key.split(',')
                     # key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file)
 
                 hout2 = open(tmp_dir + '/' + F[0] + ".target", 'w')
                 temp_key = F[0]
+                temp_total_read_count = 0
                 FF = temp_key.split(',')
-           
+            
             print('>' + F[1] + '\n' + F[2], file = hout2)
+            temp_total_read_count = temp_total_read_count + 1
 
         if key2contig[temp_key] != "":
             print(temp_key)
             supporting_reads = ssw_check(tmp_dir + '/' + temp_key + ".query", tmp_dir + '/' + temp_key + ".target")
             # print(supporting_reads)
-            key2sread_count = len(supporting_reads)
+            key2sread_count[temp_key] = len(supporting_reads)
+            key2sread_count_all[temp_key] = temp_total_read_count
 
     shutil.rmtree(tmp_dir)
 
-    return(key2sread_count)
+    return([key2sread_count, key2sread_count_all])
 
 
 
 def add_long_read_validate(input_file, output_file, tumor_bam_file, control_bam_file = None):
 
-    key2sread_count_tumor = long_read_validate_by_alignment(input_file, output_file, tumor_bam_file)
+    key2sread_count_tumor, key2sread_count_all_tumor = long_read_validate_by_alignment(input_file, output_file + '.tumor', tumor_bam_file)
 
     if control_bam_file is not None:
-        key2sread_count_control = long_read_validate_by_alignment(input_file, output_file, control_bam_file)
+        key2sread_count_control, key2sread_count_all_control = long_read_validate_by_alignment(input_file, output_file + '.control', control_bam_file)
 
     hout = open(output_file, 'w')
     with open(input_file, 'r') as hin:
 
-        header = hin.readline().rstrip('\n').split('\t')
+        header = hin.readline().rstrip('\n')
         if control_bam_file is not None:
-            print(header + '\t' + "Long_Read_Supporting_Read_Num_Tumor" + '\t' + "Long_Read_Supporting_Read_Num_Control")
+            print(header + '\t' + "Long_Read_Checked_Read_Num_Tumor" + '\t' + "Long_Read_Supporting_Read_Num_Tumor" + '\t' + \
+                                  "Long_Read_Checked_Read_Num_Control" + '\t' + "Long_Read_Supporting_Read_Num_Control", file = hout)
         else:
-            print(header + '\t' + "Long_Read_Supporting_Read_Num_Tumor")
+            print(header + '\t' + "Long_Read_Checked_Read_Num_Tumor" + '\t' + "Long_Read_Supporting_Read_Num_Tumor", file = hout)
 
         for line in hin:
             F = line.rstrip('\n').split('\t')
             key = ','.join(F[:4])
 
             sread_count_tumor = key2sread_count_tumor[key] if key in key2sread_count_tumor else 0
+            sread_count_all_tumor = key2sread_count_all_tumor[key] if key in key2sread_count_all_tumor else 0
 
             if control_bam_file is not None:
                 sread_count_control = key2sread_count_control[key] if key in key2sread_count_control else 0
+                sread_count_all_control = key2sread_count_all_control[key] if key in key2sread_count_all_control else 0
 
             if control_bam_file is not None:
-                print('\t'.join(F) + '\t' + str(sread_count_tumor) + '\t' + str(sread_count_control))
+                print('\t'.join(F) + '\t' + str(sread_count_all_tumor) + '\t' + str(sread_count_tumor) + '\t' + str(sread_count_all_control) + '\t' + str(sread_count_control), file = hout)
             else:
-                print('\t'.join(F) + '\t' + str(sread_count_tumor))
+                print('\t'.join(F) + '\t' + str(sread_count_all_tumor) + '\t' + str(sread_count_tumor), file = hout)
 
     hout.close()
  
