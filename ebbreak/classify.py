@@ -403,4 +403,8 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, repe
 
             print('\t'.join(print_list), file = hout)
             
+
+    subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.fa"])
+    subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.human.sam"])
+    if repeat_seq is not None: subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.repeat.sam"])
     
