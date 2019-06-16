@@ -57,12 +57,13 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, swalign_s
     subprocess.call(["rm", "-rf", tmp_file_path + ".tmp3.assemble_input.fa"])
     subprocess.call(["rm", "-rf", tmp_file_path + ".tmp3.assemble_output.fq"])
 
+    if temp_contig == "": temp_contig = "---" 
+    if temp_contig_all == "": temp_contig_all = "---"
     return [temp_contig, temp_contig_all]
 
 
 def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_contig_length, swalign_length = 20, swalign_score = 35):
 
-    """
     tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
     
     readid2key = {}
@@ -98,7 +99,7 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
     hout = open(output_file + ".tmp2.contig.sorted", 'w')
     subprocess.call(["sort", "-k1,1", output_file + ".tmp2.contig.unsorted"], stdout = hout)
     hout.close()
-    """
+
 
     temp_key = ""
     temp_id2seq = {}
@@ -110,7 +111,7 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
             F = line.rstrip('\n').split('\t')
             if temp_key != F[0]:
                 if len(temp_id2seq) > 0:
-                    print(temp_key)
+                    # print(temp_key)
                     tchr, tpos, tdir, tjuncseq = temp_key.split(',')
                     key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file)
 

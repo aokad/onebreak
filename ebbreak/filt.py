@@ -204,7 +204,7 @@ def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
     if use_merged_control: merged_control_db = pysam.TabixFile(merged_control_file)
 
     hout = open(output_file, 'w')
-    with gzip.open(tumor_bp_file, 'r') as hin:
+    with gzip.open(tumor_bp_file, 'rt') as hin:
         for line in hin:
             F = line.rstrip('\n').split('\t')
             mapqs = [int(x) for x in F[6].split(';')]

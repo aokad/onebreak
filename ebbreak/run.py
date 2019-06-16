@@ -125,9 +125,9 @@ def filt_main(args):
                                args.tumor_bam, args.matched_control_bam, args.min_variant_num_tumor, args.min_VAF_tumor, 
                                args.max_variant_num_control, args.max_VAF_control, args.max_fisher_pvalue)
 
-    # subprocess.call(["rm", args.output_file + ".tmp.filt1.txt"])
-    # subprocess.call(["rm", args.output_file + ".tmp.filt2.txt"])
-    # subprocess.call(["rm", args.output_file + ".tmp.filt3.txt"])
+    subprocess.call(["rm", args.output_file + ".tmp.filt1.txt"])
+    subprocess.call(["rm", args.output_file + ".tmp.filt2.txt"])
+    subprocess.call(["rm", args.output_file + ".tmp.filt3.txt"])
 
 
 def long_read_validate_main(args):
