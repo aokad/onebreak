@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import sys, os, gzip, subprocess
 # from . import parse, filt, contig, classify
-from . import parse, filt, contig, long_read_validate
+from . import parse, filt, contig, classify, long_read_validate
 
 def parse_main(args):
 
@@ -151,17 +151,19 @@ def contig_main(args):
 
 def classify_main(args):
 
-    classify.classify_canonicalSV(args.tumor_bp_contig_file, args.output_canonical_file + ".tmp1.txt")
+    classify.classify_by_contig_alignment(args.contig_result_file, args.output_file, args.reference_genome, args.repeat_seq)
+
+    # classify.classify_canonicalSV(args.tumor_bp_contig_file, args.output_canonical_file + ".tmp1.txt")
     
-    classify.filter_doublecount(args.output_canonical_file + ".tmp1.txt", args.output_canonical_file + ".tmp2.txt")
+    # classify.filter_doublecount(args.output_canonical_file + ".tmp1.txt", args.output_canonical_file + ".tmp2.txt")
 
-    classify.filter_rna_junction(args.output_canonical_file + ".tmp2.txt", args.output_canonical_file + ".tmp3.txt", args.grc, args.genome_id)
+    # classify.filter_rna_junction(args.output_canonical_file + ".tmp2.txt", args.output_canonical_file + ".tmp3.txt", args.grc, args.genome_id)
 
-    classify.annot_canonicalSV(args.output_canonical_file + ".tmp3.txt", args.output_canonical_file, args.grc, args.genome_id)
+    # classify.annot_canonicalSV(args.output_canonical_file + ".tmp3.txt", args.output_canonical_file, args.grc, args.genome_id)
 
-    classify.classify_non_canonicalSV(args.tumor_bp_contig_file, args.output_non_canonical_file + ".tmp1.txt", args.output_canonical_file + ".tmp1.txt")
+    # classify.classify_non_canonicalSV(args.tumor_bp_contig_file, args.output_non_canonical_file + ".tmp1.txt", args.output_canonical_file + ".tmp1.txt")
 
-    classify.annotate_break_point(args.output_non_canonical_file + ".tmp1.txt", args.output_non_canonical_file + ".tmp2.txt", args.grc, args.genome_id)
+    # classify.annotate_break_point(args.output_non_canonical_file + ".tmp1.txt", args.output_non_canonical_file + ".tmp2.txt", args.grc, args.genome_id)
 
     #subprocess.call(["rm", "-f", args.output_canonical_file + ".tmp1.txt"])
     #subprocess.call(["rm", "-f", args.output_canonical_file + ".tmp2.txt"])

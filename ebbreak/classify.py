@@ -1,367 +1,210 @@
 #! /usr/bin/env python
 
-from annot_utils.junction import *
-from annot_utils.gene import *
-from annot_utils.exon import *
+import sys, os, re, copy, subprocess, tempfile, shutil
 import pysam
 
-def classify_canonicalSV(input_file, output_file):
+import annot_utils
 
-    """
-    function for selecting canonical SV from contig results
-    """
+def get_margin(read):
 
-    hout = open(output_file, 'w')
+    def get_match_score(cigar_string, nm):
+        match_score = 0
+        cigar_matches = re.findall(r'\d+[MIDSHN]', cigar_string)
+        for cigar_match in cigar_matches:
+            if cigar_match[-1] == 'M':
+                match_score = match_score + int(cigar_match[:-1])
+            elif cigar_match[-1] == 'D':
+                match_score = match_score - int(cigar_match[:-1])
+            elif cigar_match[-1] == 'I':
+                match_score = match_score - int(cigar_match[:-1])
 
-    with open(input_file, 'r') as hin:
-        header = hin.readline().rstrip('\n')
+        match_score = match_score - nm
 
-        for line in hin:
-            F = line.rstrip('\n').split('\t')
-            flag = 0
+        return(match_score)
 
-            # canonical SV definition
-            # Left mapping 
-            if F[13] != "---":
+    # return 0 for reads with 0 mapping qualities
+    if read.mapping_quality == 0:
+        return(0)
 
-                # single alignment (human margin equals ---)
-                if F[14] == "---":
-                    Chr_2 = F[12].split(',')[0]
-                    Dir_2 = F[12].split(',')[3]
-                    if Dir_2 == '-':
-                        Pos_2 = F[12].split(',')[2]
-                    if Dir_2 == '+':
-                        Pos_2 = F[12].split(',')[1]
-                    Inserted_Seq = F[12].split(',')[4]
-                    flag = 1
+    margin = float("Inf")
+    if read.has_tag("XA"):
+    
+        target_nm = read.get_tag("NM") if read.has_tag("NM") else 0
+        target_match_score = get_match_score(read.cigarstring, target_nm)
+ 
+        XA_tags = read.get_tag("XA").split(';')
+        for XA_tag in XA_tags:
+            if XA_tag == '': continue
+            xchr, xpos, xcigar, xnm = XA_tag.split(',')        
+            match_score = get_match_score(xcigar, int(xnm))
+            tmargin = max(target_match_score - match_score, 0)
+            if tmargin < margin:
+                margin = tmargin        
 
-                # best mapping: 0 or 1 mismatch, margin more than 5 bases for both left and right mapping
-                elif ((int(F[13]) == 0 or int(F[13]) == 1) and (int(F[14]) >= 5) and (F[17] == "---")) :
-                    Chr_2 = F[12].split(',')[0]
-                    Dir_2 = F[12].split(',')[3]
-                    if Dir_2 == '-':
-                        Pos_2 = F[12].split(',')[2]
-                    if Dir_2 == '+':
-                        Pos_2 = F[12].split(',')[1]
-                    Inserted_Seq = F[12].split(',')[4]
-                    flag = 1
+    return(margin)
 
-                elif ((int(F[13]) == 0 or int(F[13]) == 1) and (int(F[14]) >= 5) and (int(F[17]) >= 5)) :
-                    Chr_2 = F[12].split(',')[0]
-                    Dir_2 = F[12].split(',')[3]
-                    if Dir_2 == '-':
-                        Pos_2 = F[12].split(',')[2]
-                    if Dir_2 == '+':
-                        Pos_2 = F[12].split(',')[1]
-                    Inserted_Seq = F[12].split(',')[4]
-                    flag = 1
 
-            # right mapping
-                # single alignment and  no left mapping
-            if F[16] != "---":
-                if (F[17] == "---" and F[12] == "---"):
-                    Chr_2 = F[15].split(',')[0]
-                    Dir_2 = F[15].split(',')[3]
-                    if Dir_2 == '-':
-                        Pos_2 = F[15].split(',')[2]
-                    if Dir_2 == '+':
-                        Pos_2 = F[15].split(',')[1]
-                    Inserted_Seq = F[15].split(',')[4]
-                    flag = 1
+def get_query_pos(read):
 
-            if flag == 0: continue
+    query_len = 0
+    for elm in read.cigartuples:
+        if elm[0] in [0, 1, 4, 5]: query_len = query_len + elm[1]
 
-            if F[0] != Chr_2:
-                SVtype = "translocation"
-            elif F[2] == "+" and Dir_2 == "-": 
-                SVtype = "inversion"
-            elif F[2] == "-" and Dir_2 == "+":
-                SVtype = "inversion"
-            elif F[2] == "+" and Dir_2 == "+" and int(F[1]) < int(Pos_2):
-                SVtype = "deletion"
-            elif F[2] == "-" and Dir_2 == "-" and int(F[1]) > int(Pos_2):
-                SVtype = "deletion"
-            elif F[2] == "+" and Dir_2 == "+" and int(F[1]) > int(Pos_2): 
-                SVtype = "dulplication"
-            elif F[2] == "-" and Dir_2 == "-" and int(F[1]) < int(Pos_2):
-                SVtype = "dulplication"
+    if read.cigartuples[0][0] == 0:
+        query_start = 1
+    elif read.cigartuples[0][0] in [4, 5] and read.cigartuples[1][0] == 0:
+        query_start = read.cigartuples[0][1] + 1
+    else:
+        print("cigar is strange", file = sys.stderr)
+        sys.exit(1)
+
+    if read.cigartuples[-1][0] == 0:
+        query_end = query_len
+    elif read.cigartuples[-1][0] in [4, 5] and read.cigartuples[-2][0] == 0:
+        query_end = query_len - read.cigartuples[-1][1]
+    else:
+        print("cigar is strange", file = sys.stderr)
+        sys.exit(1)
+
+    if not read.is_reverse:
+        return(query_start, query_end)
+    else:
+        return(query_len - query_end + 1, query_len - query_start + 1)
+
+ 
+def get_alignment_pos(read_set):
+
+    # no aligned read
+    aligned_flag = False
+    for read in read_set:
+        if not read.is_unmapped: aligned_flag = True
+
+    if aligned_flag == False:
+        return([])
+
+    bp_pos2alignment = [] 
+    # first check primary alignment
+    for read in read_set:
+        # if not read.is_secondary and not read.is_supplementary:
+        is_primary = 'p' if not read.is_secondary and not read.is_supplementary else 's'
+        mapq = read.mapping_quality
+
+        bp_start, bp_end = get_query_pos(read)
+
+        alignment = read.reference_name + ',' + ('+' if read.is_reverse == False else '-') + \
+                    str(read.reference_start + 1) + '-' + str(read.reference_end) + \
+                    ',' + str(mapq) + ',' + is_primary
+
+        bp_pos2alignment.append([bp_start, bp_end, alignment])
+
+
+    return(sorted(bp_pos2alignment, key = lambda x: x[1]))
+
+
+
+def get_bp_type(read_set):
+
+    # no aligned read
+    aligned_flag = False
+    for read in read_set:
+        if not read.is_unmapped: aligned_flag = True
+    
+    if aligned_flag == False:
+        return("Unmapped")
+
+    bp_type = "Unclassified"
+
+    # first check primary alignment margin
+    for read in read_set:
+        if not read.is_secondary and not read.is_supplementary:
+            primary_margin = get_margin(read)
+
+
+    if primary_margin > 5:
+
+        bp_type = "Unique_Mapped"
+        if len(read_set) == 1:
+
+            # plain SV
+            left_clipping_size = 0
+            match = re.search(r'^(\d+)S', read.cigarstring)
+            if match is not None:
+                left_clipping_size = int(match.group(1))
+        
+            right_clipping_size = 0
+            match = re.search(r'(\d+)S$', read.cigarstring)
+            if match is not None:
+                right_clipping_size = int(match.group(1))
+
+            if not read.is_reverse and left_clipping_size == 0 and right_clipping_size < 5: bp_type = "Plain SV"
+            if read.is_reverse and left_clipping_size < 5 and right_clipping_size == 0: bp_type = "Plain SV"
+
+            if not read.is_reverse and left_clipping_size > 0 and right_clipping_size < 5: bp_type = "Inseq SV"
+            if read.is_reverse and left_clipping_size < 5 and right_clipping_size > 0: bp_type = "Inseq SV"
+
+        else:
+
+            bp_type = "Complex"
+
+    else:
+        bp_type = "Noncanonical"
+
+    return(bp_type)
+
+
+def get_sv_info(bp_key, bp_start, first_alignment):
+
+    bchr, bpos, bdir, bseq = bp_key.split(',')
+
+    tchr, tregion, _, _ = first_alignment.split(',')
+    tdir = tregion[0]
+    tstart, tend = tregion[1:].split('-')
+ 
+    op_pos = tstart if tdir == '+' else tend
+
+    
+    if bchr != tchr:
+        sv_type = "Translocation"
+        sv_size = '---'
+    else:
+        if bdir != tdir:
+            sv_type = "Inversion"
+            sv_size = abs(int(bpos) - int(op_pos))
+        else:
+            if bdir == '+' and int(bpos) <= int(op_pos) or bdir == '-' and int(op_pos) <= int(bpos):
+                sv_type = "Deletion"
+                sv_size = max(abs(int(bpos) - int(op_pos)) - 1, 0)
             else:
-                SVtype = "no SV"
+                sv_type = "Tandem Duplication"
+                sv_size = max(abs(int(bpos) - int(op_pos)) + 1, 0)
 
-            print >> hout, '\t'.join(F[:3]) + '\t' + Chr_2 + '\t' + Pos_2 + '\t' + Dir_2 + '\t' + Inserted_Seq + '\t' + SVtype + '\t' + '\t'.join(F[4:])
 
-    hin.close()
-    hout.close()
+    if sorted([bchr, tchr])[0] == bchr:
+        chr1, chr2 = bchr, tchr
+    else:
+        chr1, chr2 = tchr, bchr
 
+    if sv_type == "Deletion":
+        pos1, pos2, dir1, dir2 = min(int(bpos), int(op_pos)), max(int(bpos), int(op_pos)), '+', '-'
+    elif sv_type == "Tandem Duplication":
+        pos1, pos2, dir1, dir2 = min(int(bpos), int(op_pos)), max(int(bpos), int(op_pos)), '-', '+'
+    else:
+        pos1, pos2, dir1, dir2 = min(int(bpos), int(op_pos)), max(int(bpos), int(op_pos)), bdir, bdir
 
-def filter_doublecount(input_file, output_file):
+    sv_key = ','.join([chr1, str(pos1), dir1, chr2, str(pos2), dir2, str(int(bp_start) - 1)])
 
-    """
-    function for filtering double-counted canoical SVs
-    """
+    return([sv_key, sv_type, str(sv_size)])
 
-    hout = open(output_file, 'w')
 
-    breakpoint_dict = {}
-
-    with open(input_file, 'r') as hin:
-        for line in hin:
-            F = line.rstrip('\n').split('\t')
-
-            key1 = F[0] + ',' + F[1] + ',' + F[7]
-            key2 = F[3] + ',' + F[4] + ',' + F[7]
-
-            key_margin = []
-            flag = 0
-
-            for i in range(-7, 8):
-                key_margin.append(F[3] + ',' + str(int(F[4])+i) + ',' + F[7])
-
-            for key in key_margin:
-                if key in breakpoint_dict:
-                    if breakpoint_dict[key].split(',')[0] == F[0]:
-                        if int(breakpoint_dict[key].split(',')[1]) in range(int(F[1]) - 7, int(F[1]) + 8):
-                            flag = 1
-
-            if flag == 1:
-                continue
-
-            print >> hout, '\t'.join(F)
-            breakpoint_dict[key1] = key2
-
-    hin.close()
-    hout.close()
-
-
-
-def annot_canonicalSV(input_file, output_file, grc, genome_id):
-
-    """
-    function for annotating canonical SVs
-    """
-
-    make_gene_info(output_file + ".tmp.refGene.bed.gz", "refseq", genome_id, grc, False)
-    make_exon_info(output_file + ".tmp.refExon.bed.gz", "refseq", genome_id, grc, False)
-
-    gene_tb = pysam.TabixFile(output_file + ".tmp.refGene.bed.gz")
-    exon_tb = pysam.TabixFile(output_file + ".tmp.refExon.bed.gz")
-
-
-    hout = open(output_file, 'w')
-    header2ind = {}
-    print >> hout, '\t'.join(["Chr_1", "Pos_1", "Dir_1", "Chr_2", "Pos_2", "Dir_2", "Inserted_Seq", "Variant_Type", \
-                             "Gene_1", "Gene_2", "Exon_1", "Exon_2", "Num_Tumor_Total_Read_Pair", "Num_Tumor_Var_Read_Pair", \
-                             "Tumor_VAF", "Num_Control_Ref_Read_Pair", "Num_Control_Var_Read_Pair", "Control_VAF", \
-                             "Minus_Log_Fisher_P_value", "Long_Contig_Cap3", "Contig_length",
-                             "Junc_Seq_Consistency", "Human_left_Alignment", "Human_left_Mismatch", "Human_left_Margin", "Human_right_Alignment", "Human_right_Mismatch", "Human_right_Margin",
-                             "Virus_Alignment", "Virus_Mismatch", "Virus_Margin", "Repeat_Alignment", "Repeat_Mismatch", "Repeat_Margin",
-                             "Mitochondria_Alignment", "Mitochondria_Mismatch", "Mitochondria_Margin",
-                             "Adapter_Alignment", "Adapter_Mismatch", "Adapter_Margin",
-                             "Short_Contig_Cap3", "Contig_length", "Junc_Seq_Consistency", "Human_left_Alignment", "Human_left_Mismatch", "Human_left_argin", "Human_right_Alignment", "Human_right_Mismatch", "Human_right_Margin", \
-                             "Virus_Alignment", "Virus_Mismatch", "Virus_Margin", "Repeat_Alignment", "Repeat_Mismatch", "Repeat_Margin", \
-                             "Mitochondria_Alignment", "Mitochondria_Mismatch", "Mitochondria_Margin",
-                             "Adapter_Alignment", "Adapter_Mismatch", "Adapter_Margin",
-                             "Long_Contig_SGA", "Contig_length", "Junc_Seq_Consistency", "Human_left_Alignment", "Human_left_Mismatch", "Human_left_Margin", "Human_right_Alignment", "Human_right_Mismatch", "Human_right_Margin",
-                             "Virus_Alignment", "Virus_Mismatch", "Virus_Margin", "Repeat_Alignment", "Repeat_Mismatch", "Repeat_Margin",
-                             "Mitochondria_Alignment", "Mitochondria_Mismatch", "Mitochondria_Margin",
-                             "Adapter_Alignment", "Adapter_Mismatch", "Adapter_Margin"])
-
-    with open(input_file, 'r') as hin:
-        for line in hin:
-            F = line.rstrip('\n').split('\t')
-
-            ##########
-            # check gene annotation for the side 1
-            tabixErrorFlag = 0
-            try:
-                records = gene_tb.fetch("chr"+str(F[0]), int(F[1]) - 1, int(F[1]) + 1)
-            except Exception as inst:
-                # print >> sys.stderr, "%s: %s at the following key:" % (type(inst), inst.args)
-                # print >> sys.stderr, '\t'.join(F)
-                tabixErrorFlag = 1
-
-            gene1 = [];
-            if tabixErrorFlag == 0:
-                for record_line in records:
-                    record = record_line.split('\t')
-                    gene1.append(record[3])
-
-            if len(gene1) == 0: gene1.append("---")
-            gene1 = list(set(gene1))
-            ##########
-
-            ##########
-            # check gene annotation for the side 2
-            tabixErrorFlag = 0
-            try:
-                records = gene_tb.fetch("chr"+str(F[3]), int(F[4]) - 1, int(F[4]))
-            except Exception as inst:
-                print >> sys.stderr, "%s: %s" % (type(inst), inst.args)
-                tabixErrorFlag = 1
-
-            gene2 = [];
-            if tabixErrorFlag == 0:
-                for record_line in records:
-                    record = record_line.split('\t')
-                    gene2.append(record[3])
-
-            if len(gene2) == 0: gene2.append("---")
-            gene2 = list(set(gene2))
-            ##########
-
-            ##########
-            # check exon annotation for the side 1
-            tabixErrorFlag = 0
-            try:
-                records = exon_tb.fetch("chr"+str(F[0]), int(F[1]) - 1, int(F[1]))
-            except Exception as inst:
-                print >> sys.stderr, "%s: %s" % (type(inst), inst.args)
-                tabixErrorFlag = 1
-
-            exon1 = [];
-            if tabixErrorFlag == 0:
-                for record_line in records:
-                    record = record_line.split('\t')
-                    exon1.append(record[3])
-
-            if len(exon1) == 0: exon1.append("---")
-            exon1 = list(set(exon1))
-            ##########
-
-            ##########
-            # check exon annotation for the side 2
-            tabixErrorFlag = 0
-            try:
-                records = exon_tb.fetch("chr"+str(F[3]), int(F[4]) - 1, int(F[4]))
-            except Exception as inst:
-                print >> sys.stderr, "%s: %s" % (type(inst), inst.args)
-                tabixErrorFlag = 1
-           
-            exon2 = [];
-            if tabixErrorFlag == 0:
-                for record_line in records:
-                    record = record_line.split('\t')
-                    exon2.append(record[3])
-
-            if len(exon2) == 0: exon2.append("---")
-            exon2 = list(set(exon2))
-            ##########
-
-            Tumor_VAF = float(F[9]) / float(F[8])
-            Tumor_VAF = str(round(Tumor_VAF, 4))
-
-            Control_VAF = float(F[11]) / float(F[10])
-            Control_VAF = str(round(Control_VAF, 4))
-
-            print >> hout, '\t'.join(F[:8]) + '\t' + ';'.join(gene1) + '\t' + ';'.join(gene2) + '\t' + ';'.join(exon1) + '\t' + ';'.join(exon2) + '\t' +  \
-                           '\t'.join(F[8:10]) + '\t' + str(Tumor_VAF) + '\t' + '\t'.join(F[10:12]) + '\t' + str(Tumor_VAF) + '\t' + '\t'.join(F[12:])
-
-    hin.close()
-    hout.close()
-    gene_tb.close()
-    exon_tb.close()
-
-    subprocess.call(["rm", "-rf", output_file + ".tmp.refGene.bed.gz"])
-    subprocess.call(["rm", "-rf", output_file + ".tmp.refExon.bed.gz"])
-    subprocess.call(["rm", "-rf", output_file + ".tmp.refGene.bed.gz.tbi"])
-    subprocess.call(["rm", "-rf", output_file + ".tmp.refExon.bed.gz.tbi"])
-
-
-def classify_non_canonicalSV(input_file, output_file, canonical_sv_file):
-
-    """
-    function for selecting non-canonical SV from contig results
-    """
-
-    canonical_SV_breakpoint_list = []
-
-    with open(canonical_sv_file, 'r') as hIN:
-        #header = hIN.readline().rstrip('\n').split('\t')
-        for line in hIN:
-            F = line.rstrip('\n').split('\t')
-            key1 = F[0] + ',' + F[1] + ',' + F[2]
-            if F[5] == "+":
-                key2 = F[3] + ',' + F[4] + ',' + "-"
-            if F[5] == "-":
-                key2 = F[3] + ',' + F[4] + ',' + "+"
-            canonical_SV_breakpoint_list.append(key1)
-            canonical_SV_breakpoint_list.append(key2)
-    hIN.close()
-
-
-    hout = open(output_file, 'w')
-
-    with open(input_file, 'r') as hin:
-        header = hin.readline().rstrip('\n').split('\t')
-        print >> hout, '\t'.join(header)
-
-        for line in hin:
-            F = line.rstrip('\n').split('\t')
-            # filter canonical SVs
-            flag = 0
-            for i in range(-5, 6):
-                key = F[0] + ',' + str(int(F[1]) + i) + ',' + F[2]
-                if key in canonical_SV_breakpoint_list:
-                    flag = 1
-            if flag == 1:
-                continue
-            print >> hout, '\t'.join(F)
-
-    hin.close()
-    hout.close()
-
-
-
-def filter_rna_junction(input_file, output_file, grc, genome_id):
-
-    """
-    function for removing potential RNA contamination
-    """
-
-    refseq_junc_info = output_file + ".refseq.junc.bed.gz"
-    gencode_junc_info = output_file + ".gencode.junc.bed.gz"
-
-    make_junc_info(refseq_junc_info, "refseq", genome_id, grc, False)
-    make_junc_info(gencode_junc_info, "gencode", genome_id, grc, False)
-
-    refseq_junc_tb = pysam.TabixFile(refseq_junc_info)
-    gencode_junc_tb = pysam.TabixFile(gencode_junc_info)
-
-    hout = open(output_file, 'w')
-
-    with open(input_file, 'r') as hin:
-        for line in hin:
-
-            F = line.rstrip('\n').split('\t')
-            if F[7] == "deletion":
-                if int(F[1]) <= int(F[4]):
-                    if junction_check(F[0], F[1], F[4], refseq_junc_tb, gencode_junc_tb): 
-                        continue
-                else:
-                    if junction_check(F[0], F[4], F[1], refseq_junc_tb, gencode_junc_tb): 
-                        continue
-            print >> hout, '\t'.join(F)
-
-
-    subprocess.check_call(["rm", "-rf", refseq_junc_info])
-    subprocess.check_call(["rm", "-rf", refseq_junc_info + ".tbi"])
-    subprocess.check_call(["rm", "-rf", gencode_junc_info])
-    subprocess.check_call(["rm", "-rf", gencode_junc_info + ".tbi"])
-
-
-
+# check whether potential rna contamination or not
 def junction_check(chr, start, end, ref_junc_tb, ens_junc_tb, margin = 2):
-
-    """
-    function for checkiing potential RNA contamination
-    """
 
     junc_flag = False
  
     # check junction annotation for refGene 
     tabixErrorFlag = 0
     try:
-        records = ref_junc_tb.fetch("chr"+str(chr), int(start) - 10, int(start) + 10)
+        records = ref_junc_tb.fetch(chr, int(start) - 10, int(start) + 10)
     except Exception as inst:
         tabixErrorFlag = 1
         
@@ -370,13 +213,12 @@ def junction_check(chr, start, end, ref_junc_tb, ens_junc_tb, margin = 2):
             record = record_line.split('\t')
             start_diff = int(record[1]) - int(start)
             end_diff = int(record[2]) + 1 - int(end)
-            if abs(start_diff - end_diff) <= margin: 
-                junc_flag = True
+            if abs(start_diff - end_diff) <= margin: junc_flag = True
 
     # check junction annotation for ensGene 
     tabixErrorFlag = 0
     try:
-        records = ens_junc_tb.fetch("chr"+str(chr), int(start) - 10, int(start) + 10)
+        records = ens_junc_tb.fetch(chr, int(start) - 10, int(start) + 10)
     except Exception as inst:
         tabixErrorFlag = 1
         
@@ -385,94 +227,180 @@ def junction_check(chr, start, end, ref_junc_tb, ens_junc_tb, margin = 2):
             record = record_line.split('\t')
             start_diff = int(record[1]) - int(start)
             end_diff = int(record[2]) + 1 - int(end)
-            if abs(start_diff - end_diff) <= margin: 
-                junc_flag = True
+            if abs(start_diff - end_diff) <= margin: junc_flag = True
 
     return junc_flag
 
 
 
-def annotate_break_point(input_file, output_file, grc, genome_id):
 
-    make_gene_info(output_file + ".tmp.refGene.bed.gz", "refseq", genome_id, grc, False)
-    make_exon_info(output_file + ".tmp.refExon.bed.gz", "refseq", genome_id, grc, False)
+def remove_dup_sv(qname2sv_key):
 
-    gene_tb = pysam.TabixFile(output_file + ".tmp.refGene.bed.gz")
-    exon_tb = pysam.TabixFile(output_file + ".tmp.refExon.bed.gz")
+    tmp_dir = tempfile.mkdtemp()
+    qname2dup_flag = {}
 
-    hout = open(output_file, 'w')
-    header2ind = {}
-    with open(input_file, 'r') as hin:
-        header = hin.readline().rstrip('\n').split('\t')
-        # for (i, cname) in enumerate(header):
-        #     header2ind[cname] = i
+    with open(tmp_dir + "/qname2sv_key.tmp.txt", 'w') as hout:
+        for qname in qname2sv_key:
+            if qname2sv_key[qname] == "---": 
+                qname2dup_flag[qname] = False
+            else:
+                # import pdb; pdb.set_trace()
+                # print(qname2sv_key[qname])
+                tchr1, tend1, tdir1, tchr2, tend2, tdir2, tinseq = qname2sv_key[qname].split(',')
+                tstart1, tstart2 = str(int(tend1) - 1), str(int(tend2) - 1)
+                print('\t'.join([tchr1, tstart1, tend1, tchr2, tstart2, tend2, qname, tinseq, tdir1, tdir2]), file = hout)
 
-        print >> hout, '\t'.join(["Chr", "Pos", "Dir", "Junc_Seq", "Gene", "Exon", "Num_Tumor_Total_Read_Pair", "Num_Tumor_Var_Read_Pair",
-                                 "Num_Control_Ref_Read_Pair", "Num_Control_Var_Read_Pair", "Minus_Log_Fisher_P_value", "Long_Contig_Cap3", "Contig_length",
-                                 "Junc_Seq_Consistency", "Human_left_Alignment", "Human_left_Mismatch", "Human_left_Margin", "Human_right_Alignment", "Human_right_Mismatch", "Human_right_Margin",
-                                 "Virus_Alignment", "Virus_Mismatch", "Virus_Margin", "Repeat_Alignment", "Repeat_Mismatch", "Repeat_Margin",
-                                 "Mitochondria_Alignment", "Mitochondria_Mismatch", "Mitochondria_Margin",
-                                 "Adapter_Alignment", "Adapter_Mismatch", "Adapter_Margin",
-                                 "Short_Contig_Cap3", "Contig_length", "Junc_Seq_Consistency", "Human_left_Alignment", "Human_left_Mismatch", "Human_left_argin", "Human_right_Alignment", "Human_right_Mismatch", "Human_right_Margin", \
-                                 "Virus_Alignment", "Virus_Mismatch", "Virus_Margin", "Repeat_Alignment", "Repeat_Mismatch", "Repeat_Margin", \
-                                 "Mitochondria_Alignment", "Mitochondria_Mismatch", "Mitochondria_Margin",
-                                 "Adapter_Alignment", "Adapter_Mismatch", "Adapter_Margin",
-                                 "Long_Contig_SGA", "Contig_length", "Junc_Seq_Consistency", "Human_left_Alignment", "Human_left_Mismatch", "Human_left_Margin", "Human_right_Alignment", "Human_right_Mismatch", "Human_right_Margin",
-                                 "Virus_Alignment", "Virus_Mismatch", "Virus_Margin", "Repeat_Alignment", "Repeat_Mismatch", "Repeat_Margin",
-                                 "Mitochondria_Alignment", "Mitochondria_Mismatch", "Mitochondria_Margin",
-                                 "Adapter_Alignment", "Adapter_Mismatch", "Adapter_Margin"])
+    with open(tmp_dir + "/qname2sv_key.tmp.sorted.txt", 'w') as hout:
+        subprocess.call(["sort", "-k1,1", "-k3,3n", "-k4,4", "-k6,6n", tmp_dir + "/qname2sv_key.tmp.txt"], stdout = hout) 
 
+    
+    key2info = {}
+    with open(tmp_dir + "/qname2sv_key.tmp.sorted.txt", 'r') as hin:
         for line in hin:
             F = line.rstrip('\n').split('\t')
+            del_list = []
+            skip_flag = 0
 
-            ##########
-            # check gene annotation
-            tabixErrorFlag = 0
-            try:
-                records = gene_tb.fetch("chr"+str(F[0]), int(F[1]) - 1, int(F[1]) + 1)
-            except Exception as inst:
-                # print >> sys.stderr, "%s: %s at the following key:" % (type(inst), inst.args)
-                # print >> sys.stderr, '\t'.join(F)
-                tabixErrorFlag = 1
+            # if F[2] == "62793856":
+            #     import pdb; pdb.set_trace()
 
-            gene = [];
-            if tabixErrorFlag == 0:
-                for record_line in records:
-                    record = record_line.split('\t')
-                    gene.append(record[3])
+            for tkey in key2info:
+                # import pdb; pdb.set_trace()
+                tchr1, _, tend1, tchr2, _, tend2, _, tinseq, tdir1, tdir2 = key2info[tkey]
+                 
+                if F[0] != tchr1 or int(F[2]) > int(tend1) + 1000:
+                    qname2dup_flag[tkey] = False   
+                    del_list.append(tkey)
 
-            gene = list(set(gene))
-            if len(gene) == 0: gene.append("---")  
+                else:
+                    if F[0] == tchr1 and F[3] == tchr2 and F[8] == tdir1 and F[9] == tdir2 and abs(int(F[2]) - int(tend1)) <= 10 and abs(int(F[5]) - int(tend2)) <= 10:
+                        qname2dup_flag[F[6]] = True
+                        skip_flag = 1
 
-            ##########
-            # check gene annotation
-            tabixErrorFlag = 0
-            try:
-                records = exon_tb.fetch("chr"+str(F[0]), int(F[1]) - 1, int(F[1]) + 1)
-            except Exception as inst:
-                # print >> sys.stderr, "%s: %s at the following key:" % (type(inst), inst.args)
-                # print >> sys.stderr, '\t'.join(F)
-                tabixErrorFlag = 1
-                
-            exon = [];
-            if tabixErrorFlag == 0:
-                for record_line in records:
-                    record = record_line.split('\t')
-                    exon.append(record[3])
-                    
-            exon = list(set(exon))
-            if len(exon) == 0: exon.append("---")
+            for tkey in del_list:
+                del key2info[tkey]
 
-            print >> hout, '\t'.join(F[:4]) + '\t' + \
-                           ','.join(gene) + '\t' + ';'.join(exon) + '\t' + '\t'.join(F[4:])
+            if skip_flag == 0:
+                key2info[F[6]] = F
+   
+        # last processing
+        for tkey in key2info:
+            tchr1, _, tend1, tchr2, _, tend2, _, tinseq, tdir1, tdir2 = key2info[tkey]
+            qname2dup_flag[tkey] = False
+            
+    shutil.rmtree(tmp_dir)
 
-    hin.close()
+    return(qname2dup_flag)
+
+
+
+
+def classify_by_contig_alignment(input_file, output_file, reference_genome, repeat_seq = None, bwa_option = "-T0 -h300"):
+
+    bwa_cmds = ["bwa", "mem"] + bwa_option.split(' ')
+    
+    key2seq = {}
+    hout = open(output_file + ".tmp4.alignment_check.fa", 'w')
+    with open(input_file, 'r') as hin:
+        header = hin.readline().rstrip('\n').split('\t')
+        header2ind = {}
+        for (i, cname) in enumerate(header):
+            header2ind[cname] = i
+        for line in hin:
+            F = line.rstrip('\n').split('\t')
+            key = ','.join(F[:4])
+            key2seq[key] = F[header2ind["Contig_Post_BP"]]
+            print('>' + key + '\n' + F[header2ind["Contig_Post_BP"]], file = hout)
+
     hout.close()
-    gene_tb.close()
-    exon_tb.close()
 
-    subprocess.call(["rm", "-rf", output_file + ".tmp.refGene.bed.gz"])
-    subprocess.call(["rm", "-rf", output_file + ".tmp.refExon.bed.gz"])
-    subprocess.call(["rm", "-rf", output_file + ".tmp.refGene.bed.gz.tbi"])
-    subprocess.call(["rm", "-rf", output_file + ".tmp.refExon.bed.gz.tbi"])
+    FNULL = open(os.devnull, 'w')
+    sret = subprocess.call(bwa_cmds + [reference_genome, output_file + ".tmp4.alignment_check.fa",
+                           "-o", output_file + ".tmp4.alignment_check.human.sam"], stdout = FNULL, stderr = subprocess.STDOUT)
+    if sret != 0:
+        print("bwa error, error code: " + str(sret), file = sys.stderr)
+
+    if repeat_seq is not None:
+        sret = subprocess.call(bwa_cmds + [repeat_seq, output_file + ".tmp4.alignment_check.fa",
+                               "-o", output_file + ".tmp4.alignment_check.repeat.sam"], stdout = FNULL, stderr = subprocess.STDOUT)
+        if sret != 0:
+            print("bwa error, error code: " + str(sret), file = sys.stderr)
+
+    FNULL.close() 
+
+
+    samfile = pysam.AlignmentFile(output_file + ".tmp4.alignment_check.human.sam", 'r')
+
+    temp_qname = ''
+    temp_read_set = []
+    qname2bp_type = {}
+    qname2alignment_str = {}
+    qname2sv_key = {}
+    qname2sv_type = {}
+    qname2sv_size = {}
+
+    for read in samfile.fetch():
+
+        if read.query_name != temp_qname:
+            if temp_qname != '':
+                qname2bp_type[temp_qname] = get_bp_type(temp_read_set)
+                bp_pos2alignment = get_alignment_pos(temp_read_set)
+                qname2sv_key[temp_qname], qname2sv_type[temp_qname], qname2sv_size[temp_qname] = get_sv_info(temp_qname, bp_pos2alignment[0][0], bp_pos2alignment[0][2]) if len(bp_pos2alignment) >= 1 else ["---", "---", "---"]
+                qname2alignment_str[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
+
+            temp_qname = read.query_name
+            temp_read_set = []
+
+        temp_read_set.append(read)
+
+    # last treatment
+    if temp_qname != '':
+
+        qname2bp_type[temp_qname] = get_bp_type(temp_read_set)
+        bp_pos2alignment = get_alignment_pos(temp_read_set)
+        qname2sv_key[temp_qname], qname2sv_type[temp_qname], qname2sv_size[temp_qname] = get_sv_info(temp_qname, bp_pos2alignment[0][0], bp_pos2alignment[0][2]) if len(bp_pos2alignment) >= 1 else ["---", "---", "---"]
+        qname2alignment_str[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
+
+    qname2dup_flag = remove_dup_sv(qname2sv_key)
+
+    samfile.close()
+
+    if repeat_seq is not None:
+
+        samfile = pysam.AlignmentFile(output_file + ".tmp4.alignment_check.repeat.sam", 'r')
+        temp_qname = ''
+        temp_read_seq = []
+        qname2alignment_str_repeat = {}
+        
+        for read in samfile.fetch():
+            if read.query_name != temp_qname:
+                if temp_qname != '':
+                    bp_pos2alignment = get_alignment_pos(temp_read_set)
+                    qname2alignment_str_repeat[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
+                temp_qname = read.query_name
+                temp_read_set = []
+
+            temp_read_set.append(read)
+
+        # last treatment
+        if temp_qname != '':
+            bp_pos2alignment = get_alignment_pos(temp_read_set)
+            qname2alignment_str_repeat[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
+
+ 
+    hout = open(output_file, 'w')
+    with open(input_file, 'r') as hin:
+        header = hin.readline().rstrip('\n').split('\t')
+        print('\t'.join(header + ["BP_Type", "Human_Alignment", "SV_Key", "SV_Type", "SV_Sie", "Is_Dup_SV", "Repeat_Alignment"]), file = hout)
+
+        for (i, cname) in enumerate(header):
+            header2ind[cname] = i
+        for line in hin:
+            F = line.rstrip('\n').split('\t')
+            qname = ','.join(F[:4])
+            print_list = F + [qname2bp_type[qname], qname2alignment_str[qname], qname2sv_key[qname], qname2sv_type[qname], qname2sv_size[qname], str(qname2dup_flag[qname])]
+            if repeat_seq is not None: print_list = print_list + [qname2alignment_str_repeat[qname]]
+
+            print('\t'.join(print_list), file = hout)
+            
     
