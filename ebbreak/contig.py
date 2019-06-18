@@ -130,6 +130,7 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
             key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file, swalign_score)
 
 
+    # import pdb; pdb.set_trace()
     hout = open(output_file, 'w')
     with open(input_file, 'r') as hin:
         for line in hin:
@@ -140,10 +141,10 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
 
             key = ','.join(F[:4])
 
-            if key not in key2contig: continue
-            contig = key2contig[key]
-            contig_all = key2contig_all[key]
-            if len(contig) < min_contig_length: continue
+            # if key not in key2contig: continue
+            contig = key2contig[key] if key in key2contig else "---"
+            contig_all = key2contig_all[key] if key in key2contig_all else "---"
+            # if len(contig) < min_contig_length: continue
 
             
             print('\t'.join(F) + '\t' + contig + '\t' + contig_all, file = hout)

@@ -309,8 +309,9 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, repe
         for line in hin:
             F = line.rstrip('\n').split('\t')
             key = ','.join(F[:4])
-            key2seq[key] = F[header2ind["Contig_Post_BP"]]
-            print('>' + key + '\n' + F[header2ind["Contig_Post_BP"]], file = hout)
+            if F[header2ind["Contig_Post_BP"]] != "---":
+                key2seq[key] = F[header2ind["Contig_Post_BP"]]
+                print('>' + key + '\n' + F[header2ind["Contig_Post_BP"]], file = hout)
 
     hout.close()
 
@@ -391,15 +392,26 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, repe
     hout = open(output_file, 'w')
     with open(input_file, 'r') as hin:
         header = hin.readline().rstrip('\n').split('\t')
-        print('\t'.join(header + ["BP_Type", "Human_Alignment", "SV_Key", "SV_Type", "SV_Sie", "Is_Dup_SV", "Repeat_Alignment"]), file = hout)
+        print('\t'.join(header + ["BP_Type", "Human_Alignment", "SV_Key", "SV_Type", "SV_Size", "Is_Dup_SV", "Repeat_Alignment"]), file = hout)
 
         for (i, cname) in enumerate(header):
             header2ind[cname] = i
         for line in hin:
             F = line.rstrip('\n').split('\t')
             qname = ','.join(F[:4])
-            print_list = F + [qname2bp_type[qname], qname2alignment_str[qname], qname2sv_key[qname], qname2sv_type[qname], qname2sv_size[qname], str(qname2dup_flag[qname])]
-            if repeat_seq is not None: print_list = print_list + [qname2alignment_str_repeat[qname]]
+            
+            bp_type = qname2bp_type[qname] if qname in qname2bp_type else "---"
+            alignment_str = qname2alignment_str[qname] if qname in qname2alignment_str else "---"
+            sv_key = qname2sv_key[qname] if qname in qname2sv_key else "---"
+            sv_type = qname2sv_type[qname] if qname in qname2sv_type else "---"
+            sv_size = qname2sv_size[qname] if qname in qname2sv_size else "---"
+            dup_flag = qname2dup_flag[qname] if qname in qname2dup_flag else "---"
+
+            print_list = F + [bp_type, alignment_str, sv_key, sv_type, sv_size, str(dup_flag)]
+
+            if repeat_seq is not None: 
+                alignment_str_repeat = qname2alignment_str_repeat[qname] if qname in qname2alignment_str_repeat else "---"
+                print_list = print_list + [alignment_str_repeat]
 
             print('\t'.join(print_list), file = hout)
             
@@ -407,4 +419,6 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, repe
     subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.fa"])
     subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.human.sam"])
     if repeat_seq is not None: subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.repeat.sam"])
-    
+   
+
+ 
