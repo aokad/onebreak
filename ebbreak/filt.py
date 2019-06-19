@@ -186,8 +186,11 @@ def filter_by_matched_control_local_check(input_file, control_bp_file, output_fi
 
                 if total_read_num >= local_total_read_num_thres: matched_control_local_check = True
 
-            if matched_control_local_check: continue
-            print('\t'.join(F) + '\t' + str(total_read_num), file = hout)
+                if matched_control_local_check: continue
+                print('\t'.join(F) + '\t' + str(total_read_num), file = hout)
+
+            else:
+                print('\t'.join(F) + '\t' + "---", file = hout)
 
     hout.close() 
 
