@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python:
 
 from __future__ import print_function
 import sys, os, tempfile, subprocess, shutil
@@ -20,7 +20,7 @@ def ssw_check(target, query, score_ratio_thres = 1.4, start_pos_thres = 0.1, end
     dInt2Ele = {}
     # init DNA score matrix
     lEle = ['A', 'C', 'G', 'T', 'N']
-    dRc = {'A':'T', 'C':'G', 'G':'C', 'T':'A', 'a':'T', 'c':'G', 'g':'C', 't':'A'} 
+    dRc = {'A':'T', 'C':'G', 'G':'C', 'T':'A', 'N': 'N', 'a':'T', 'c':'G', 'g':'C', 't':'A', 'n': 'N'} 
     for i,ele in enumerate(lEle):
         dEle2Int[ele] = i
         dEle2Int[ele.lower()] = i
@@ -40,6 +40,18 @@ def ssw_check(target, query, score_ratio_thres = 1.4, start_pos_thres = 0.1, end
 
     # set flag
     nFlag = 0
+
+    # check whether libssw.so is in LD_LIBRARY_PATH
+    sLibPath = ""
+    for ld_path in os.environ["LD_LIBRARY_PATH"].split(':'):
+        # print ld_path
+        if os.path.exists(ld_path + "/libssw.so"):
+            sLibPath = ld_path # + "/libssw.so"
+            break
+    if sLibPath == "":
+        print("cannot find libssw.so in LD_LIBRARY_PATH", file = sys.stderr)
+        sys.exit(1)
+
     ssw = ssw_lib.CSsw(sLibPath)
     supporting_reads = []
 
@@ -179,20 +191,21 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
         for line in hin:
             F = line.rstrip('\n').split('\t')
             # print('>' + F[0] + '\n' + key2contig[F[0]])
-            with open(tmp_dir + '/' + F[0] + ".query", 'w') as hout1:
+            with open(tmp_dir + '/' + F[0] + ".query.fa", 'w') as hout1:
                 print('>' + F[0] + '\n' + key2contig[F[0]], file = hout1) 
 
             if temp_key != F[0]:
                 if temp_key != "" and len(key2contig[temp_key]) >= 100:
                     print(temp_key)
+                    hout2.close()
                     # print(len(key2contig[temp_key]))
-                    supporting_reads = ssw_check(tmp_dir + '/' + temp_key + ".query", tmp_dir + '/' + temp_key + ".target")
+                    supporting_reads = ssw_check(tmp_dir + '/' + temp_key + ".query.fa", tmp_dir + '/' + temp_key + ".target.fa")
                     key2sread_count[temp_key] = len(supporting_reads)
                     key2sread_count_all[temp_key] = temp_total_read_count
                     # tchr, tpos, tdir, tjuncseq = temp_key.split(',')
                     # key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file)
 
-                hout2 = open(tmp_dir + '/' + F[0] + ".target", 'w')
+                hout2 = open(tmp_dir + '/' + F[0] + ".target.fa", 'w')
                 temp_key = F[0]
                 temp_total_read_count = 0
                 FF = temp_key.split(',')
@@ -202,13 +215,16 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
 
         if key2contig[temp_key] != "":
             print(temp_key)
-            supporting_reads = ssw_check(tmp_dir + '/' + temp_key + ".query", tmp_dir + '/' + temp_key + ".target")
+            hout2.close()
+            supporting_reads = ssw_check(tmp_dir + '/' + temp_key + ".query.fa", tmp_dir + '/' + temp_key + ".target.fa")
             # print(supporting_reads)
             key2sread_count[temp_key] = len(supporting_reads)
             key2sread_count_all[temp_key] = temp_total_read_count
 
     shutil.rmtree(tmp_dir)
 
+    subprocess.call(["rm" ,"-rf", output_file + ".tmp3.query_seq.unsorted"])
+    subprocess.call(["rm" ,"-rf", output_file + ".tmp3.query_seq.sorted"])
     return([key2sread_count, key2sread_count_all])
 
 
