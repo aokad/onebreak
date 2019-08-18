@@ -119,6 +119,8 @@ def create_parser():
     filt.add_argument("--permissible_range", type = int, default = 0,
                       help = "permissible range for control breakpoint search")
 
+    filt.add_argument("--debug", default = False, action = 'store_true', help = "keep intermediate files")
+
     filt.set_defaults(func = filt_main)
     ####################
     # contig
