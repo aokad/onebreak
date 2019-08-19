@@ -187,6 +187,9 @@ def create_parser():
     long_read_validate.add_argument("tumor_bam", metavar = "tumor.bam", type = str,
                                     help = "path to tumor bam file")
 
+    long_read_validate.add_argument("reference_genome", metavar = "reference.fa", type = str,
+                                    help = "path to reference genome")
+
     long_read_validate.add_argument("--control_bam", metavar = "control.bam", type = str, default = None,
                                     help = "path to control bam file")
 

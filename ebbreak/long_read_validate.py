@@ -5,8 +5,10 @@ import sys, os, tempfile, subprocess, shutil
 import pysam
 
 from .pyssw import *
+from . import my_seq
 
-def ssw_check(target, query, score_ratio_thres = 1.4, start_pos_thres = 0.1, end_pos_thres = 0.9):
+# def ssw_check(target, query, score_ratio_thres = 1.4, start_pos_thres = 0.1, end_pos_thres = 0.9):
+def ssw_check(target, query):
 
     nMatch = 2
     nMismatch = 2
@@ -53,7 +55,8 @@ def ssw_check(target, query, score_ratio_thres = 1.4, start_pos_thres = 0.1, end
         sys.exit(1)
 
     ssw = ssw_lib.CSsw(sLibPath)
-    supporting_reads = []
+    # supporting_reads = []
+    alignment_info = {}
 
     # iterate query sequence
     for sQId,sQSeq,sQQual in read(query):
@@ -99,17 +102,19 @@ def ssw_check(target, query, score_ratio_thres = 1.4, start_pos_thres = 0.1, end
                 sCigar, sQ, sA, sR = buildPath(sQRcSeq, sRSeq, resRc[4], resRc[2], resRc[8])
 
             # import pdb; pdb.set_trace()
-            if int(resPrint[0]) > score_ratio_thres * len(sRSeq) and int(resPrint[2]) + 1 < start_pos_thres * len(sRSeq) and int(resPrint[3]) + 1 > end_pos_thres * len(sRSeq):
-                supporting_reads.append([sQId, resPrint[0], resPrint[2] + 1, resPrint[3] + 1])
+            # if int(resPrint[0]) > score_ratio_thres * len(sRSeq) and int(resPrint[2]) + 1 < start_pos_thres * len(sRSeq) and int(resPrint[3]) + 1 > end_pos_thres * len(sRSeq):
+            # supporting_reads.append([sQId, resPrint[0], resPrint[2] + 1, resPrint[3] + 1])
+            alignment_info[sQId] = [resPrint[0], resPrint[2] + 1, resPrint[3] + 1]
 
         ssw.init_destroy(qProfile)
         ssw.init_destroy(qRcProfile)
        
-    return(supporting_reads)
+    # return(supporting_reads)
+    return(alignment_info)
 
 
 
-def long_read_validate_by_alignment(input_file, output_file, bam_file):
+def long_read_validate_by_alignment(input_file, output_file, bam_file, reference, score_ratio_thres = 1.4, start_pos_thres = 0.1, end_pos_thres = 0.9, var_ref_margin_thres = 20):
 
     bam_ps = pysam.AlignmentFile(bam_file, "rb")
  
@@ -126,7 +131,7 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
                 rname2key[read.qname].append(key)
 
 
-    hout = open(output_file + ".tmp3.query_seq.unsorted", 'w')
+    hout = open(output_file + ".tmp3.long_read_seq.unsorted", 'w')
     for read in bam_ps.fetch():
 
         flags = format(int(read.flag), "#014b")[:1:-1]
@@ -141,17 +146,19 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
 
             for key in rname2key[read.qname]:
 
-                print(key + '\t' + read.qname + '\t' + read.query_sequence, file = hout)
+                print(key + '\t' + read.qname + '\t' + read.long_read_sequence, file = hout)
 
     hout.close()
     bam_ps.close()
 
-    hout = open(output_file + ".tmp3.query_seq.sorted", 'w')
-    subprocess.call(["sort", "-k1,1", output_file + ".tmp3.query_seq.unsorted"], stdout = hout)
+    hout = open(output_file + ".tmp3.long_read_seq.sorted", 'w')
+    subprocess.call(["sort", "-k1,1", output_file + ".tmp3.long_read_seq.unsorted"], stdout = hout)
     hout.close()
 
-    
 
+    # my_seq.get_seq function could be used. But this procedure is repeatead many times and using pysam class may be good for the IO.
+    reference_fasta = pysam.FastaFile(os.path.abspath(reference))
+ 
     key2contig = {}
     with open(input_file, 'r') as hin:
 
@@ -170,11 +177,22 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
             pre_contig = F[header2ind["Contig_All"]][:(len(F[header2ind["Contig_All"]]) - len(F[header2ind["Contig_Post_BP"]]))]
 
             if len(pre_contig) > len(post_contig):
-                proc_contig = pre_contig[-len(post_contig):] + post_contig
+                variant_contig = pre_contig[-len(post_contig):] + post_contig
             else:
-                proc_contig = pre_contig + post_contig[:len(pre_contig)]
+                variant_contig = pre_contig + post_contig[:len(pre_contig)]
 
-            key2contig[key] = proc_contig
+            if len(variant_contig) != 2 * min(len(pre_contig), len(post_contig)):
+                print("Contig length error: something is wrong!!", file = sys.stderr)
+                sys.exit(1)
+
+            if tdir == '+' and len(variant_contig) >= 100:
+                reference_local_seq = reference_fasta.fetch(tchr, tpos - min(len(pre_contig), len(post_contig)) - 1, tpos + min(len(pre_contig), len(post_contig)))
+            elif tdir == '-' and len(variant_contig) >= 100:
+                reference_local_seq = reference_fasta.fetch(tchr, tpos - min(len(pre_contig), len(post_contig)), tpos + min(len(pre_contig), len(post_contig)) - 1) 
+                reference_local_seq = my_seq.reverse_complement(reference_local_seq)
+            else:
+                reference_local_seq = ''
+            key2contig[key] = [variant_contig, reference_local_seq]
 
 
     tmp_dir = tempfile.mkdtemp()
@@ -187,54 +205,77 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file):
     temp_total_read_count = 0
     key2sread_count = {}
     key2sread_count_all = {}
-    with open(output_file + ".tmp3.query_seq.sorted") as hin:
+    with open(output_file + ".tmp3.long_read_seq.sorted") as hin:
         for line in hin:
             F = line.rstrip('\n').split('\t')
             # print('>' + F[0] + '\n' + key2contig[F[0]])
-            with open(tmp_dir + '/' + F[0] + ".query.fa", 'w') as hout1:
-                print('>' + F[0] + '\n' + key2contig[F[0]], file = hout1) 
+            # with open(tmp_dir + '/' + F[0] + ".variant_contig.fa", 'w') as hout1:
+            #     print('>' + F[0] + '\n' + key2contig[F[0]], file = hout1) 
 
             if temp_key != F[0]:
-                if temp_key != "" and len(key2contig[temp_key]) >= 100:
-                    print(temp_key)
+                if temp_key != "" and len(variant_contig) >= 100:
                     hout2.close()
                     # print(len(key2contig[temp_key]))
-                    supporting_reads = ssw_check(tmp_dir + '/' + temp_key + ".query.fa", tmp_dir + '/' + temp_key + ".target.fa")
-                    key2sread_count[temp_key] = len(supporting_reads)
-                    key2sread_count_all[temp_key] = temp_total_read_count
-                    # tchr, tpos, tdir, tjuncseq = temp_key.split(',')
-                    # key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file)
+                    alignment_info_var = ssw_check(tmp_dir + '/' + temp_key + ".variant_contig.fa", tmp_dir + '/' + temp_key + ".long_read_seq.fa")
+                    alignment_info_ref = ssw_check(tmp_dir + '/' + temp_key + ".reference_local_seq.fa", tmp_dir + '/' + temp_key + ".long_read_seq.fa")
 
-                hout2 = open(tmp_dir + '/' + F[0] + ".target.fa", 'w')
+                    all_keys = list(set(list(alignment_info_var.keys()) + list(alignment_info_ref.keys())))
+                    supporting_read_keys = [key for key in all_keys if \
+                        alignment_info_var[key][0] > score_ratio_thres * len(variant_contig) and \
+                        alignment_info_var[key][1] < start_pos_thres * len(variant_contig) and \
+                        alignment_info_var[key][2] > end_pos_thres * len(variant_contig) and \
+                        alignment_info_var[key][0] >= alignment_info_ref[key][0] + var_ref_margin_thres]
+
+                    key2sread_count[temp_key] = len(supporting_read_keys)
+                    key2sread_count_all[temp_key] = len(all_keys)
+
+                    # print(temp_key + '\t' + str(key2sread_count_all[temp_key]) + '\t' + str(key2sread_count[temp_key]))
+
+                hout2 = open(tmp_dir + '/' + F[0] + ".long_read_seq.fa", 'w')
                 temp_key = F[0]
                 temp_total_read_count = 0
                 FF = temp_key.split(',')
-            
+                variant_contig, reference_local_seq = key2contig[temp_key]
+                with open(tmp_dir + '/' + F[0] + ".variant_contig.fa", 'w') as hout1:
+                    print('>' + F[0] + '\n' + variant_contig, file = hout1)
+                with open(tmp_dir + '/' + F[0] + ".reference_local_seq.fa", 'w') as hout1:
+                    print('>' + F[0] + '\n' + reference_local_seq, file = hout1)
+
             print('>' + F[1] + '\n' + F[2], file = hout2)
             temp_total_read_count = temp_total_read_count + 1
 
         if key2contig[temp_key] != "":
             print(temp_key)
             hout2.close()
-            supporting_reads = ssw_check(tmp_dir + '/' + temp_key + ".query.fa", tmp_dir + '/' + temp_key + ".target.fa")
-            # print(supporting_reads)
-            key2sread_count[temp_key] = len(supporting_reads)
-            key2sread_count_all[temp_key] = temp_total_read_count
+
+            alignment_info_var = ssw_check(tmp_dir + '/' + temp_key + ".variant_contig.fa", tmp_dir + '/' + temp_key + ".long_read_seq.fa")
+            alignment_info_ref = ssw_check(tmp_dir + '/' + temp_key + ".reference_local_seq.fa", tmp_dir + '/' + temp_key + ".long_read_seq.fa")
+            
+            all_keys = list(set(list(alignment_info_var.keys()) + list(alignment_info_ref.keys())))
+            supporting_read_keys = [key for key in all_keys if \
+                alignment_info_var[key][0] > score_ratio_thres * len(variant_contig) and \
+                alignment_info_var[key][1] < start_pos_thres * len(variant_contig) and \
+                alignment_info_var[key][2] > end_pos_thres * len(variant_contig) and \
+                alignment_info_var[key][0] >= alignment_info_ref[key][0] + var_ref_margin_thres]
+            
+            key2sread_count[temp_key] = len(supporting_read_keys)
+            key2sread_count_all[temp_key] = len(all_keys)
+
 
     shutil.rmtree(tmp_dir)
 
-    subprocess.call(["rm" ,"-rf", output_file + ".tmp3.query_seq.unsorted"])
-    subprocess.call(["rm" ,"-rf", output_file + ".tmp3.query_seq.sorted"])
+    subprocess.call(["rm" ,"-rf", output_file + ".tmp3.long_read_seq.unsorted"])
+    subprocess.call(["rm" ,"-rf", output_file + ".tmp3.long_read_seq.sorted"])
     return([key2sread_count, key2sread_count_all])
 
 
 
-def add_long_read_validate(input_file, output_file, tumor_bam_file, control_bam_file = None):
+def add_long_read_validate(input_file, output_file, reference, tumor_bam_file, control_bam_file = None):
 
-    key2sread_count_tumor, key2sread_count_all_tumor = long_read_validate_by_alignment(input_file, output_file + '.tumor', tumor_bam_file)
+    key2sread_count_tumor, key2sread_count_all_tumor = long_read_validate_by_alignment(input_file, output_file + '.tumor', tumor_bam_file, reference)
 
     if control_bam_file is not None:
-        key2sread_count_control, key2sread_count_all_control = long_read_validate_by_alignment(input_file, output_file + '.control', control_bam_file)
+        key2sread_count_control, key2sread_count_all_control = long_read_validate_by_alignment(input_file, output_file + '.control', control_bam_file, reference)
 
     hout = open(output_file, 'w')
     with open(input_file, 'r') as hin:
