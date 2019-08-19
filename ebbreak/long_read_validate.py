@@ -114,7 +114,7 @@ def ssw_check(target, query):
 
 
 
-def long_read_validate_by_alignment(input_file, output_file, bam_file, reference, score_ratio_thres = 1.4, start_pos_thres = 0.1, end_pos_thres = 0.9, var_ref_margin_thres = 20):
+def long_read_validate_by_alignment(input_file, output_file, bam_file, reference, debug, score_ratio_thres = 1.4, start_pos_thres = 0.1, end_pos_thres = 0.9, var_ref_margin_thres = 20):
 
     bam_ps = pysam.AlignmentFile(bam_file, "rb")
  
@@ -154,7 +154,7 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file, reference
     hout = open(output_file + ".tmp3.long_read_seq.sorted", 'w')
     subprocess.call(["sort", "-k1,1", output_file + ".tmp3.long_read_seq.unsorted"], stdout = hout)
     hout.close()
-
+    if not debug: subprocess.call(["rm" ,"-rf", output_file + ".tmp3.long_read_seq.unsorted"])
 
     # my_seq.get_seq function could be used. But this procedure is repeatead many times and using pysam class may be good for the IO.
     reference_fasta = pysam.FastaFile(os.path.abspath(reference))
@@ -263,19 +263,18 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file, reference
 
 
     shutil.rmtree(tmp_dir)
+    if not debug: subprocess.call(["rm" ,"-rf", output_file + ".tmp3.long_read_seq.sorted"])
 
-    subprocess.call(["rm" ,"-rf", output_file + ".tmp3.long_read_seq.unsorted"])
-    subprocess.call(["rm" ,"-rf", output_file + ".tmp3.long_read_seq.sorted"])
     return([key2sread_count, key2sread_count_all])
 
 
 
-def add_long_read_validate(input_file, output_file, reference, tumor_bam_file, control_bam_file = None):
+def add_long_read_validate(input_file, output_file, reference, tumor_bam_file, control_bam_file = None, debug):
 
-    key2sread_count_tumor, key2sread_count_all_tumor = long_read_validate_by_alignment(input_file, output_file + '.tumor', tumor_bam_file, reference)
+    key2sread_count_tumor, key2sread_count_all_tumor = long_read_validate_by_alignment(input_file, output_file + '.tumor', tumor_bam_file, reference, debug)
 
     if control_bam_file is not None:
-        key2sread_count_control, key2sread_count_all_control = long_read_validate_by_alignment(input_file, output_file + '.control', control_bam_file, reference)
+        key2sread_count_control, key2sread_count_all_control = long_read_validate_by_alignment(input_file, output_file + '.control', control_bam_file, reference, debug)
 
     hout = open(output_file, 'w')
     with open(input_file, 'r') as hin:

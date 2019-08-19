@@ -133,7 +133,8 @@ def filt_main(args):
 
 def long_read_validate_main(args):
 
-    long_read_validate.add_long_read_validate(args.contig_result_file, args.output_file, args.reference_genome, args.tumor_bam, args.control_bam)
+    long_read_validate.add_long_read_validate(args.contig_result_file, args.output_file, args.reference_genome, 
+                                              args.tumor_bam, args.control_bam, args.debug)
 
 
 def contig_main(args):

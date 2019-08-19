@@ -193,6 +193,8 @@ def create_parser():
     long_read_validate.add_argument("--control_bam", metavar = "control.bam", type = str, default = None,
                                     help = "path to control bam file")
 
+    long_read_validate.add_argument("--debug", default = False, action = 'store_true', help = "keep intermediate files")
+
     long_read_validate.set_defaults(func = long_read_validate_main)
 
     ####################
