@@ -56,10 +56,10 @@ RUN wget https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/arch
 
 ENV LD_LIBRARY_PATH /Complete-Striped-Smith-Waterman-Library-1.1/src:$LD_LIBRARY_PATH
 
-COPY EBbreak_modified.tar.gz /
+# COPY EBbreak_modified.tar.gz /
 
-RUN tar jxvf EBbreak_modified.tar.gz && \
-    cd EBbreak_modified && \
+RUN git clone https://github.com/friend1ws/nccbreak.git && \
+    cd nccbreak && \
     pip3 install .
  
 

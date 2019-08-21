@@ -146,7 +146,7 @@ def long_read_validate_by_alignment(input_file, output_file, bam_file, reference
 
             for key in rname2key[read.qname]:
 
-                print(key + '\t' + read.qname + '\t' + read.long_read_sequence, file = hout)
+                print(key + '\t' + read.qname + '\t' + read.query_sequence, file = hout)
 
     hout.close()
     bam_ps.close()
