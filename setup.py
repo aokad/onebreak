@@ -7,7 +7,7 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 def get_version():
-    with open(path.join(here, "nccbreak/version.py"), encoding = 'utf-8') as hin:
+    with open(path.join(here, "onebreak/version.py"), encoding = 'utf-8') as hin:
         for line in hin:
             if line.startswith("__version__"):
                 version = line.partition('=')[2]
@@ -18,12 +18,12 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name = 'nccbreak',
+    name = 'onebreak',
     version = get_version(),
     description='Python tools for various analysis for breakpoints from cancer genome sequencing data.',
     long_description=long_description, 
     long_description_content_type='text/markdown',  
-    url = 'https://github.com/friend1ws/nccbreak',
+    url = 'https://github.com/friend1ws/onebreak',
     author = 'Yuichi Shiraishi, Yuki Saito, Kenichi Chiba',
     author_email = 'friend1ws@gamil.com',
     license = 'GPLv3',
@@ -41,7 +41,7 @@ setup(
     packages = find_packages(exclude = ['tests']),
 
     install_requires = [],
-    entry_points = {'console_scripts': ['nccbreak = nccbreak:main']}
+    entry_points = {'console_scripts': ['onebreak = onebreak:main']}
 
 )
 

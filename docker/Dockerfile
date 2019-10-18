@@ -40,7 +40,7 @@ ENV PATH /fermi-lite:$PATH
 RUN pip3 install --upgrade setuptools
 
 RUN pip3 install annot_utils==0.3.0
-RUN pip3 install pysam==0.15
+RUN pip3 install pysam==0.152
 RUN pip3 install numpy==1.15.1
 RUN pip3 install scipy==1.1.0
 RUN pip3 install statistics==1.0.3.5
@@ -58,8 +58,8 @@ ENV LD_LIBRARY_PATH /Complete-Striped-Smith-Waterman-Library-1.1/src:$LD_LIBRARY
 
 # COPY EBbreak_modified.tar.gz /
 
-RUN git clone https://github.com/friend1ws/nccbreak.git && \
-    cd nccbreak && \
+RUN git clone https://github.com/friend1ws/onebreak.git && \
+    cd onebreak && \
     pip3 install .
  
 

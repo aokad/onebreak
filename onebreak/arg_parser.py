@@ -6,7 +6,7 @@ from .version import __version__
 
 def create_parser():
 
-    parser = argparse.ArgumentParser(prog = "nccbreak")
+    parser = argparse.ArgumentParser(prog = "onebreak")
 
     parser.add_argument("--version", action = "version", version = "%(prog)s " + __version__)
 
