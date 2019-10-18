@@ -34,9 +34,10 @@ def parse_main(args):
         print("Error in indexing merged junction file", file = sys.stderr)
         sys.exit(1)
 
-    subprocess.call(["rm", "-f", args.output_file + ".bp.tmp.txt"])
-    subprocess.call(["rm", "-f", args.output_file + ".bp.clustered.tmp.txt"])
-    subprocess.call(["rm", "-f", args.output_file + ".bp.clustered.sorted.tmp.txt"])
+    if not args.debug:
+        subprocess.call(["rm", "-f", args.output_file + ".bp.tmp.txt"])
+        subprocess.call(["rm", "-f", args.output_file + ".bp.clustered.tmp.txt"])
+        subprocess.call(["rm", "-f", args.output_file + ".bp.clustered.sorted.tmp.txt"])
    
 
 def merge_control_main(args):
