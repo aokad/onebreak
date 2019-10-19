@@ -154,7 +154,9 @@ def contig_main(args):
 
 def classify_main(args):
 
-    classify.classify_by_contig_alignment(args.contig_result_file, args.output_file, args.reference_genome, args.te_seq, args.simple_repeat)
+
+    classify.classify_by_contig_alignment(args.contig_result_file, args.output_file, args.reference_genome, 
+                                          args.te_seq, args.simple_repeat, args.remove_rna)
 
     # classify.classify_canonicalSV(args.tumor_bp_contig_file, args.output_canonical_file + ".tmp1.txt")
     

@@ -3,7 +3,9 @@
 import sys, os, re, copy, subprocess, tempfile, shutil
 import pysam
 
+from .check_ref import check_reference
 import annot_utils
+
 
 def get_margin(read):
 
@@ -200,7 +202,7 @@ def get_sv_info(bp_key, bp_start, first_alignment):
 
 
 # check whether potential rna contamination or not
-def junction_check(chr, start, end, ref_junc_tb, ens_junc_tb, margin = 2):
+def rna_junction_check(chr, start, end, ref_junc_tb, ens_junc_tb, margin = 2):
 
     junc_flag = False
  
@@ -245,7 +247,7 @@ def remove_dup_sv(qname2sv_key):
     with open(tmp_dir + "/qname2sv_key.tmp.txt", 'w') as hout:
         for qname in qname2sv_key:
             if qname2sv_key[qname] == "---": 
-                qname2dup_flag[qname] = False
+                qname2dup_flag[qname] = "FALSE"
             else:
                 # import pdb; pdb.set_trace()
                 # print(qname2sv_key[qname])
@@ -272,12 +274,12 @@ def remove_dup_sv(qname2sv_key):
                 tchr1, _, tend1, tchr2, _, tend2, _, tinseq, tdir1, tdir2 = key2info[tkey]
                  
                 if F[0] != tchr1 or int(F[2]) > int(tend1) + 1000:
-                    qname2dup_flag[tkey] = False   
+                    qname2dup_flag[tkey] = "FALSE"
                     del_list.append(tkey)
 
                 else:
                     if F[0] == tchr1 and F[3] == tchr2 and F[8] == tdir1 and F[9] == tdir2 and abs(int(F[2]) - int(tend1)) <= 10 and abs(int(F[5]) - int(tend2)) <= 10:
-                        qname2dup_flag[F[6]] = True
+                        qname2dup_flag[F[6]] = "TRUE"
                         skip_flag = 1
 
             for tkey in del_list:
@@ -289,7 +291,7 @@ def remove_dup_sv(qname2sv_key):
         # last processing
         for tkey in key2info:
             tchr1, _, tend1, tchr2, _, tend2, _, tinseq, tdir1, tdir2 = key2info[tkey]
-            qname2dup_flag[tkey] = False
+            qname2dup_flag[tkey] = "FALSE"
             
     shutil.rmtree(tmp_dir)
 
@@ -298,7 +300,17 @@ def remove_dup_sv(qname2sv_key):
 
 
 
-def classify_by_contig_alignment(input_file, output_file, reference_genome, te_seq = None,  simple_repeat = None, bwa_option = "-T0 -h300"):
+def classify_by_contig_alignment(input_file, output_file, reference_genome, te_seq = None,  simple_repeat = None, remove_rna = None, bwa_option = "-T0 -h300"):
+
+    if remove_rna:
+        genome_id, is_grc = check_reference(reference_genome)
+        refseq_junc_info = output_file + ".refseq.junc.bed.gz"
+        gencode_junc_info = output_file + ".gencode.junc.bed.gz"
+        annot_utils.junction.make_junc_info(refseq_junc_info, "refseq", genome_id, is_grc, False)
+        annot_utils.junction.make_junc_info(gencode_junc_info, "gencode", genome_id, is_grc, False)
+        refseq_junc_tb = pysam.TabixFile(refseq_junc_info)
+        gencode_junc_tb = pysam.TabixFile(gencode_junc_info)
+
 
     bwa_cmds = ["bwa", "mem"] + bwa_option.split(' ')
     
@@ -400,6 +412,7 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, te_s
     with open(input_file, 'r') as hin:
         header = hin.readline().rstrip('\n').split('\t')
         header = header + ["BP_Type", "Human_Alignment", "SV_Key", "SV_Type", "SV_Size", "Is_Dup_SV"]
+        if remove_rna: header = header + ["Is_RNA"]
         if te_seq is not None: header = header + ["TE_Alignment"]
         if simple_repeat is not None: header = header + ["Simple_Repeat"]
         print('\t'.join(header), file = hout)
@@ -418,6 +431,13 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, te_s
             dup_flag = qname2dup_flag[qname] if qname in qname2dup_flag else "---"
 
             print_list = F + [bp_type, alignment_str, sv_key, sv_type, sv_size, str(dup_flag)]
+
+            if remove_rna:
+                is_rna = "FALSE"
+                if sv_type == "Deletion":
+                    tchr1, tpos1, _, _, tpos2, _, _ = sv_key.split(',') 
+                    if rna_junction_check(tchr1, tpos1, tpos2, refseq_junc_tb, gencode_junc_tb): is_rna = "TRUE"
+                print_list = print_list + [is_rna]
 
             if te_seq is not None: 
                 alignment_str_te = qname2alignment_str_te[qname] if qname in qname2alignment_str_te else "---"
@@ -447,6 +467,12 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, te_s
 
     subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.fa"])
     subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.human.sam"])
+    if remove_rna:
+        subprocess.check_call(["rm", "-rf", refseq_junc_info])
+        subprocess.check_call(["rm", "-rf", refseq_junc_info + ".tbi"])
+        subprocess.check_call(["rm", "-rf", gencode_junc_info])
+        subprocess.check_call(["rm", "-rf", gencode_junc_info + ".tbi"])
+
     if te_seq is not None: subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.te.sam"])
    
 

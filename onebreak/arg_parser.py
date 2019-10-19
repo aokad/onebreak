@@ -220,6 +220,9 @@ def create_parser():
     classify.add_argument("--simple_repeat", metavar = "simple_repeat.bed.gz", type = str, default = None,
                           help = "path to tabix indexed simple repeat bed.gz file")
 
+    classify.add_argument("--remove_rna", default = False, action = "store_true",
+                          help = "remove putative rna splicing junction contamination (default: %(default)s)")
+
     classify.set_defaults(func = classify_main)
     ###
 
