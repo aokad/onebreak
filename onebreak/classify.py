@@ -362,7 +362,10 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, te_s
                 qname2bp_type[temp_qname] = get_bp_type(temp_read_set)
                 bp_pos2alignment = get_alignment_pos(temp_read_set)
                 qname2sv_key[temp_qname], qname2sv_type[temp_qname], qname2sv_size[temp_qname] = get_sv_info(temp_qname, bp_pos2alignment[0][0], bp_pos2alignment[0][2]) if len(bp_pos2alignment) >= 1 else ["---", "---", "---"]
-                qname2alignment_str[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
+                if len(bp_pos2alignment) > 0: 
+                    qname2alignment_str[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
+                else:
+                    qname2alignment_str[temp_qname] = "---"
 
             temp_qname = read.query_name
             temp_read_set = []
@@ -375,8 +378,10 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, te_s
         qname2bp_type[temp_qname] = get_bp_type(temp_read_set)
         bp_pos2alignment = get_alignment_pos(temp_read_set)
         qname2sv_key[temp_qname], qname2sv_type[temp_qname], qname2sv_size[temp_qname] = get_sv_info(temp_qname, bp_pos2alignment[0][0], bp_pos2alignment[0][2]) if len(bp_pos2alignment) >= 1 else ["---", "---", "---"]
-        qname2alignment_str[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
-        if qname2alignment_str == '': qname2alignment_str = '---'
+        if len(bp_pos2alignment) > 0:
+            qname2alignment_str[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
+        else:
+            qname2alignment_str[temp_qname] = "---"
 
     qname2dup_flag = remove_dup_sv(qname2sv_key)
 
@@ -393,7 +398,10 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, te_s
             if read.query_name != temp_qname:
                 if temp_qname != '':
                     bp_pos2alignment = get_alignment_pos(temp_read_set)
-                    qname2alignment_str_te[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
+                    if len(bp_pos2alignment) > 0:
+                        qname2alignment_str_te[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
+                    else:
+                        qname2alignment_str_te[temp_qname] = "---"
                 temp_qname = read.query_name
                 temp_read_set = []
 
@@ -402,8 +410,10 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, te_s
         # last treatment
         if temp_qname != '':
             bp_pos2alignment = get_alignment_pos(temp_read_set)
-            qname2alignment_str_te[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
-            if qname2alignment_str_te == '': qname2alignment_str_te = '---'
+            if len(bp_pos2alignment) > 0:
+                qname2alignment_str_te[temp_qname] = ';'.join([str(x[0]) + '-' + str(x[1]) + ':' + x[2] for x in bp_pos2alignment])
+            else:
+                qname2alignment_str_te[temp_qname] = "---"
 
     if simple_repeat is not None:
         simple_repeat_tb = pysam.TabixFile(simple_repeat)
