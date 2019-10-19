@@ -189,7 +189,10 @@ def get_sv_info(bp_key, bp_start, first_alignment):
     elif sv_type == "Tandem Duplication":
         pos1, pos2, dir1, dir2 = min(int(bpos), int(op_pos)), max(int(bpos), int(op_pos)), '-', '+'
     else:
-        pos1, pos2, dir1, dir2 = min(int(bpos), int(op_pos)), max(int(bpos), int(op_pos)), bdir, bdir
+        if sorted([bchr, tchr])[0] == bchr:
+            pos1, pos2, dir1, dir2 = bpos, op_pos, bdir, tdir
+        else:
+            pos1, pos2, dir1, dir2 = op_pos, bpos, tdir, bdir
 
     sv_key = ','.join([chr1, str(pos1), dir1, chr2, str(pos2), dir2, str(int(bp_start) - 1)])
 
