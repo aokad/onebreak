@@ -8,7 +8,7 @@ import annot_utils.gene, annot_utils.exon
 from .filt import get_target_bp
 from . import my_seq
 
-def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, swalign_score_thres = 35):
+def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lite_option = "-l 20", swalign_score_thres = 35):
 
     match = 2
     mismatch = -1
@@ -21,9 +21,10 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, swalign_s
         print('>' + tid, file = hout)
         print(readid2seq[tid], file = hout)
     hout.close()
-    
+   
+    fermi_lite_options = fermi_lite_option.split(' ')
     hout = open(tmp_file_path + ".tmp3.assemble_output.fq", 'w')
-    sret = subprocess.call(["fml-asm", '-l', '20', tmp_file_path + ".tmp3.assemble_input.fa"], stdout = hout) 
+    sret = subprocess.call(["fml-asm"] + fermi_lite_options + [tmp_file_path + ".tmp3.assemble_input.fa"], stdout = hout) 
     hout.close()
 
     if sret != 0:
@@ -62,7 +63,7 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, swalign_s
     return [temp_contig, temp_contig_all]
 
 
-def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_contig_length, swalign_length = 20, swalign_score = 35):
+def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_contig_length, fermi_lite_option, swalign_length = 20, swalign_score = 35):
 
     tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
     
@@ -113,7 +114,7 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
                 if len(temp_id2seq) > 0:
                     # print(temp_key)
                     tchr, tpos, tdir, tjuncseq = temp_key.split(',')
-                    key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file)
+                    key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file, fermi_lite_option, swalign_score)
 
                 temp_key = F[0]
                 temp_id2seq = {}
@@ -127,10 +128,9 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
 
         if len(temp_id2seq) > 0:
             tchr, tpos, tdir, tjuncseq = temp_key.split(',') 
-            key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file, swalign_score)
+            key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file, fermi_lite_option, swalign_score)
 
 
-    # import pdb; pdb.set_trace()
     hout = open(output_file, 'w')
     with open(input_file, 'r') as hin:
         for line in hin:

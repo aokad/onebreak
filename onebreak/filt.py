@@ -267,7 +267,9 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
                      "Minus_Log_Fisher_P_value", "Peaked_Ratio", "NUM_Local_Control_Total_Read"]), file = hout)
 
     tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
-    matched_control_bam_bh = pysam.Samfile(matched_control_bam, "rb")
+    use_matched_control = True if matched_control_bam != "" else False
+    if use_matched_control: 
+        matched_control_bam_bh = pysam.Samfile(matched_control_bam, "rb")
 
 
     with open(input_file, 'r') as hin:
@@ -290,21 +292,21 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
             if VAF_tumor < min_VAF_tumor: continue
 
 
-            if matched_control_bam != "":
+            if use_matched_control:
                 total_num_control, read_ids_control, mapping_quals_control, clipping_sizes_control, alignment_sizes_control, juncseq_base_quals_control = get_target_bp(F[0], F[2], F[3], F[4], matched_control_bam_bh)
                 variant_num_control = len(read_ids_control.split(';')) if read_ids_control != '' else 0
                 VAF_control = float(variant_num_control) / total_num_control if total_num_control > 0 else 1.0
 
             else:
-                variant_read_num_control = "---"
-                total_read_num_control = "---"
+                variant_num_control = "---"
+                total_num_control = "---"
                 VAF_control = "---"
 
-            if variant_num_control > max_variant_num_control: continue
-            if VAF_control != "---" and VAF_control > max_VAF_control: continue 
+            if use_matched_control and variant_num_control > max_variant_num_control: continue
+            if use_matched_control and VAF_control > max_VAF_control: continue 
 
             lpvalue = "---"
-            if VAF_control != "":
+            if use_matched_control:
                 oddsratio, pvalue = stats.fisher_exact([[total_num_tumor - variant_num_tumor, variant_num_tumor], [total_num_control - variant_num_control, variant_num_control]], 'less')
                 if pvalue < 1e-100: pvalue = 1e-100
                 lpvalue = (- math.log(pvalue, 10) if pvalue < 1 else 0)

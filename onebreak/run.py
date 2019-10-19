@@ -141,7 +141,7 @@ def long_read_validate_main(args):
 def contig_main(args):
 
     contig.generate_contig(args.tumor_bp_filt_file, args.output_file,
-                           args.tumor_bam, args.reference_genome, args.min_contig_length)
+                           args.tumor_bam, args.reference_genome, args.min_contig_length, args.fermi_lite_option)
 
     # contig.alignment_contig(args.tumor_bp_filt_file, args.output_file + ".tmp.filt4.txt", args.output_file, 
     #                         args.reference_genome, args.blat_option, args.blat_ooc, args.virus_db, args.repeat_db, args.mitochondria_db, args.adapter_db)

@@ -142,6 +142,9 @@ def create_parser():
     contig.add_argument("reference_genome", metavar = "reference.fa", type = str,
                         help = "path to reference genome")
 
+    contig.add_argument("--fermi_lite_option", type = str, default = "-l 20",
+                        help = "option for fermi-lite")
+
     """
     contig.add_argument("--blat_option", type = str, default = "-stepSize=5 -repMatch=2253",
                         help = "option used in blat")
