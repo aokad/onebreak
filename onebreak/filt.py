@@ -196,7 +196,8 @@ def filter_by_matched_control_local_check(input_file, control_bp_file, output_fi
 
  
 def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
-                             min_median_mapq, min_max_clip_size, min_second_juncseq_baseq, permissible_range):
+                             min_median_mapq, min_max_clip_size, min_second_juncseq_baseq, 
+                             min_unique_clip_sizes, permissible_range):
 
     """
     filter by base quality (1st step)
@@ -216,7 +217,8 @@ def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
 
             # remove breakpoint if supporting read does not meet the criteria below
             # if len(mapqs) == 1: continue
-            if len(list(set(clip_sizes))) == 1: continue
+            if len(clip_sizes) == 1: continue
+            if len(list(set(clip_sizes))) < min_unique_clip_sizes: continue
             if numpy.median(mapqs) < min_median_mapq: continue
             if max(clip_sizes) < min_max_clip_size: continue
             #if numpy.median(base_qualities) < 20: continue

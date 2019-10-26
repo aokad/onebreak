@@ -113,6 +113,9 @@ def create_parser():
     filt.add_argument("--min_max_clip_size", type = int, default = 30,
                       help = "threshould of maximum clipped size (if the maximum clipped size is below this value, then filtered out) (default: %(default)s)")
 
+    filt.add_argument("--min_unique_clip_sizes", type = int, default = 2,
+                      help = "threshould of unique clipped sizes (default: %(default)s)")
+
     filt.add_argument("--ignore_juncseq_consistency", action='store_true', default=False, 
                              help = "ignore juncseq consistency when comparing with control")
 

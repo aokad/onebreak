@@ -116,7 +116,8 @@ def merge_control_main(args):
 def filt_main(args):
 
     filt.filter_by_merged_control(args.tumor_bp_file, args.output_file + ".tmp.filt1.txt", args.merged_control_file,
-                                  args.min_median_mapq, args.min_max_clip_size, args.min_second_juncseq_baseq, args.permissible_range)
+                                  args.min_median_mapq, args.min_max_clip_size, args.min_second_juncseq_baseq, 
+                                  args.min_unique_clip_sizes, args.permissible_range)
 
     filt.filter_by_peakedness(args.output_file + ".tmp.filt1.txt", args.tumor_bp_file, args.output_file + ".tmp.filt2.txt")
 
