@@ -54,7 +54,7 @@ def merge_control_main(args):
     with open(args.bp_file_list, 'r') as hin:
         for line in hin:
             bp_file = line.rstrip('\n')
-            with gzip.open(bp_file, 'r') as hin2:
+            with gzip.open(bp_file, 'rt') as hin2:
                 for line2 in hin2:
                     F = line2.rstrip('\n').split('\t')
                     support_num = len(F[7].split(';'))
