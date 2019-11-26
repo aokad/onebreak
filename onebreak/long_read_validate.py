@@ -93,18 +93,22 @@ def ssw_check(target, query):
             # build cigar and trace back path
             if resRc == None or res[0] > resRc[0]:
                 resPrint = res
+                rstart, rend = resPrint[2] + 1, resPrint[3] + 1
+                qstart, qend = resPrint[4] + 1, resPrint[5] + 1
                 strand = '+'
                 sCigar, sQ, sA, sR = buildPath(sQSeq, sRSeq, res[4], res[2], res[8])
             else:
                 resPrint = resRc
+                rstart, rend = resPrint[2] + 1, resPrint[3] + 1
+                qstart, qend = len(sQSeq) - resPrint[5], len(sQSeq) - resPrint[4] 
                 strand = '-'
                 sCigar, sQ, sA, sR = buildPath(sQRcSeq, sRSeq, resRc[4], resRc[2], resRc[8])
 
             # import pdb; pdb.set_trace()
             # if int(resPrint[0]) > score_ratio_thres * len(sRSeq) and int(resPrint[2]) + 1 < start_pos_thres * len(sRSeq) and int(resPrint[3]) + 1 > end_pos_thres * len(sRSeq):
             # supporting_reads.append([sQId, resPrint[0], resPrint[2] + 1, resPrint[3] + 1])
-            alignment_info[sQId] = [resPrint[0], resPrint[2] + 1, resPrint[3] + 1, resPrint[4] + 1, resPrint[5] + 1, strand]
-
+            # alignment_info[sQId] = [resPrint[0], resPrint[2] + 1, resPrint[3] + 1, resPrint[4] + 1, resPrint[5] + 1, strand]
+            alignment_info[sQId] = [resPrint[0], rstart, rend, qstart, qend, strand]
         ssw.init_destroy(qProfile)
         ssw.init_destroy(qRcProfile)
        
