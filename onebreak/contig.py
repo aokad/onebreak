@@ -2,19 +2,20 @@
 
 from __future__ import print_function
 import sys, os, math, re, subprocess
-import pysam, swalign
+import pysam # , swalign
 import annot_utils.gene, annot_utils.exon
 
 from .filt import get_target_bp
 from . import my_seq
+from .swalign import *
 
 def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lite_option = "-l 20", swalign_score_thres = 35):
 
     match = 2
     mismatch = -1
-    scoring = swalign.NucleotideScoringMatrix(match, mismatch)
+    scoring = NucleotideScoringMatrix(match, mismatch)
 
-    sw = swalign.LocalAlignment(scoring)  # you can also choose gap penalties, etc...
+    sw = LocalAlignment(scoring)  # you can also choose gap penalties, etc...
 
     hout = open(tmp_file_path + ".tmp3.assemble_input.fa", 'w')
     for tid in sorted(readid2seq):
