@@ -119,7 +119,11 @@ def ssw_check(target, query):
 
 def long_read_validate_by_alignment(input_file, output_file, bam_file, reference, debug, score_ratio_thres = 1.4, start_pos_thres = 0.1, end_pos_thres = 0.9, var_ref_margin_thres = 20):
 
-    bam_ps = pysam.AlignmentFile(bam_file, "rb")
+    seq_filename, seq_ext = os.path.splitext(bam_file)
+    if seq_ext == ".cram":
+        bam_ps = pysam.AlignmentFile(bam_file, "rc", reference_filename=reference)
+    else:
+        bam_ps = pysam.AlignmentFile(bam_file, "rb")
  
     rname2key = {}
     with open(input_file, 'r') as hin:

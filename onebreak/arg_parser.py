@@ -39,6 +39,9 @@ def create_parser():
     parse.add_argument("--check_interval", type = int, default = 1000000,
                        help = "the default value will work for most cases. but when memory flows, please try reducing this value (default: %(default)s)")
 
+    parse.add_argument("--reference_genome", metavar = "reference.fa", type = str, default = None,
+                        help = "path to reference genome")
+
     parse.set_defaults(func = parse_main)
     ####################   
 
