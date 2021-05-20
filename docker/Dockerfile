@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 MAINTAINER Yuichi Shiraishi <friend1ws@gmail.com> 
 
 
@@ -39,10 +39,10 @@ ENV PATH /fermi-lite:$PATH
 # RUN pip install --upgrade pip
 RUN pip3 install --upgrade setuptools
 
-RUN pip3 install annot_utils==0.3.0
-RUN pip3 install pysam==0.15.2
-RUN pip3 install numpy==1.15.1
-RUN pip3 install scipy==1.1.0
+RUN pip3 install annot_utils==0.3.1
+RUN pip3 install pysam==0.16.0.1
+RUN pip3 install numpy==1.19.5
+RUN pip3 install scipy==1.5.4
 RUN pip3 install statistics==1.0.3.5
 
 RUN git clone https://github.com/mbreese/swalign.git && \

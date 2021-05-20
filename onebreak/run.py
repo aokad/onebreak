@@ -8,7 +8,7 @@ from . import parse, filt, contig, classify, long_read_validate
 
 def parse_main(args):
 
-    parse.parse_bp_from_bam(args.bam_file, args.output_file + ".bp.tmp.txt", args.key_seq_size, args.min_major_clip_size, args.max_minor_clip_size)
+    parse.parse_bp_from_bam(args.bam_file, args.output_file + ".bp.tmp.txt", args.key_seq_size, args.min_major_clip_size, args.max_minor_clip_size, args.reference_genome)
 
     parse.cluster_breakpoint(args.output_file + ".bp.tmp.txt", args.output_file + ".bp.clustered.tmp.txt", args.check_interval)
 
@@ -125,7 +125,7 @@ def filt_main(args):
 
     filt.filter_by_allele_freq(args.output_file + ".tmp.filt3.txt", args.output_file, 
                                args.tumor_bam, args.matched_control_bam, args.min_variant_num_tumor, args.min_VAF_tumor, 
-                               args.max_variant_num_control, args.max_VAF_control, args.max_fisher_pvalue)
+                               args.max_variant_num_control, args.max_VAF_control, args.max_fisher_pvalue, args.reference_genome)
 
     if not args.debug:
         subprocess.call(["rm", args.output_file + ".tmp.filt1.txt"])

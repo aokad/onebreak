@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-import sys, pysam, re, subprocess
+import sys, pysam, re, subprocess, os
 from statistics import mean
 from . import my_seq
 
@@ -13,7 +13,7 @@ cigarHIMSRe = re.compile('(\d+)([HIMS])')
 cigarHSRe_right = re.compile('(\d+)([HS])$')
 cigarHSRe_left = re.compile('^(\d+)([HS])')
 
-def parse_bp_from_bam(input_bam, output_file, key_seq_size, min_major_clip_size, max_minor_clip_size):
+def parse_bp_from_bam(input_bam, output_file, key_seq_size, min_major_clip_size, max_minor_clip_size, reference_genome):
 
     """
     function for getting breakpoints from BAM file
@@ -22,7 +22,14 @@ def parse_bp_from_bam(input_bam, output_file, key_seq_size, min_major_clip_size,
     breakpoint info (juncChr, juncPos-1, juncPos, Dir (right clipping:+, left clipping:-), Juncseq, ID + ("/1" or "/2"), MAPQ, Clipping size, AlignmentSize, Base quality of juncseq)
     """
 
-    bamfile = pysam.Samfile(input_bam, "rb")
+    seq_filename, seq_ext = os.path.splitext(input_bam)
+    if seq_ext == ".cram":
+        if reference_genome == None:
+            print("Error in using the CRAM file. --reference_genome is required.", file = sys.stderr)
+            sys.exit(1)
+        bamfile = pysam.Samfile(input_bam, "rc", reference_filename=reference_genome)
+    else:
+        bamfile = pysam.Samfile(input_bam, "rb")
     hout = open(output_file, "w")
  
     # maybe add the regional extraction of bam files

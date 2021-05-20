@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-import sys, gzip, math, numpy
+import sys, gzip, math, numpy, os
 import pysam
 from scipy import stats
 from statistics import mean
@@ -256,7 +256,7 @@ def filter_by_merged_control(tumor_bp_file, output_file, merged_control_file,
 
 
 def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_bam, min_variant_num_tumor, min_VAF_tumor,
-                          max_variant_num_control, max_VAF_control, max_fisher_pvalue):
+                          max_variant_num_control, max_VAF_control, max_fisher_pvalue, reference_genome):
 
     """
     filtering by allele frequency
@@ -268,10 +268,19 @@ def filter_by_allele_freq(input_file, output_file, tumor_bam, matched_control_ba
                      "Num_Tumor_Total_Read", "Num_Tumor_Var_Read", "VAF_Tumor", "Num_Control_Total_Read", "Num_Control_Var_Read", "VAF_Control",
                      "Minus_Log_Fisher_P_value", "Peaked_Ratio", "NUM_Local_Control_Total_Read"]), file = hout)
 
-    tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
+    seq_filename, seq_ext = os.path.splitext(tumor_bam)
+    if seq_ext == ".cram":
+        tumor_bam_bh = pysam.Samfile(tumor_bam, "rc", reference_filename=reference_genome)
+    else:
+        tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
+
     use_matched_control = True if matched_control_bam != "" else False
     if use_matched_control: 
-        matched_control_bam_bh = pysam.Samfile(matched_control_bam, "rb")
+        seq_filename, seq_ext = os.path.splitext(matched_control_bam)
+        if seq_ext == ".cram":
+            matched_control_bam_bh = pysam.Samfile(matched_control_bam, "rc", reference_filename=reference_genome)
+        else:
+            matched_control_bam_bh = pysam.Samfile(matched_control_bam, "rb")
 
 
     with open(input_file, 'r') as hin:

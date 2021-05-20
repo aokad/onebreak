@@ -66,7 +66,11 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
 
 def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_contig_length, fermi_lite_option, swalign_length = 20, swalign_score = 35):
 
-    tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
+    seq_filename, seq_ext = os.path.splitext(tumor_bam)
+    if seq_ext == ".cram":
+        tumor_bam_bh = pysam.Samfile(tumor_bam, "rc", reference_filename=reference_genome)
+    else:
+        tumor_bam_bh = pysam.Samfile(tumor_bam, "rb")
     
     readid2key = {}
     with open(input_file, 'r') as hin:
@@ -80,7 +84,10 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
                 readid2key[re.sub(r'/\d$', '', read_id)] = ','.join(F[:4])
 
  
-    bamfile = pysam.Samfile(tumor_bam, "rb")
+    if seq_ext == ".cram":
+        bamfile = pysam.Samfile(tumor_bam, "rc", reference_filename=reference_genome)
+    else:
+        bamfile = pysam.Samfile(tumor_bam, "rb")
 
     hout = open(output_file + ".tmp2.contig.unsorted", 'w')
     for read in bamfile.fetch():
