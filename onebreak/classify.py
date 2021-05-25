@@ -58,7 +58,7 @@ def get_query_pos(read):
     elif read.cigartuples[0][0] in [4, 5] and read.cigartuples[1][0] == 0:
         query_start = read.cigartuples[0][1] + 1
     else:
-        print("WARN: cigar is strange: " + read.rname + ":" + str(read.pos), file = sys.stderr)
+        print("WARN: cigar is strange. qname: " + read.qname, file = sys.stderr)
         flag_cigar_strange = True
 
     if read.cigartuples[-1][0] == 0:
@@ -66,7 +66,7 @@ def get_query_pos(read):
     elif read.cigartuples[-1][0] in [4, 5] and read.cigartuples[-2][0] == 0:
         query_end = query_len - read.cigartuples[-1][1]
     else:
-        print("WARN: cigar is strange: " + read.rname + ":" + str(read.pos), file = sys.stderr)
+        print("WARN: cigar is strange. qname: " + read.qname, file = sys.stderr)
         flag_cigar_strange = True
 
     if flag_cigar_strange:
