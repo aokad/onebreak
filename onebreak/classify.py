@@ -48,6 +48,7 @@ def get_margin(read):
 
 def get_query_pos(read):
 
+    flag_cigar_strange = False
     query_len = 0
     for elm in read.cigartuples:
         if elm[0] in [0, 1, 4, 5]: query_len = query_len + elm[1]
@@ -57,16 +58,19 @@ def get_query_pos(read):
     elif read.cigartuples[0][0] in [4, 5] and read.cigartuples[1][0] == 0:
         query_start = read.cigartuples[0][1] + 1
     else:
-        print("cigar is strange", file = sys.stderr)
-        sys.exit(1)
+        print("WARN: cigar is strange. qname: " + read.qname, file = sys.stderr)
+        flag_cigar_strange = True
 
     if read.cigartuples[-1][0] == 0:
         query_end = query_len
     elif read.cigartuples[-1][0] in [4, 5] and read.cigartuples[-2][0] == 0:
         query_end = query_len - read.cigartuples[-1][1]
     else:
-        print("cigar is strange", file = sys.stderr)
-        sys.exit(1)
+        print("WARN: cigar is strange. qname: " + read.qname, file = sys.stderr)
+        flag_cigar_strange = True
+
+    if flag_cigar_strange:
+        return(None, None)
 
     if not read.is_reverse:
         return(query_start, query_end)
@@ -92,6 +96,8 @@ def get_alignment_pos(read_set):
         mapq = read.mapping_quality
 
         bp_start, bp_end = get_query_pos(read)
+        if bp_start == None or bp_end == None:
+            continue
 
         alignment = read.reference_name + ',' + ('+' if read.is_reverse == False else '-') + \
                     str(read.reference_start + 1) + '-' + str(read.reference_end) + \
