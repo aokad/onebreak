@@ -1,4 +1,4 @@
-# EBBreak
+# onebreak
 empirical bayesian framework for detecting somatic breakpoints from sequencing data
 
 ## Dependency
@@ -15,13 +15,17 @@ Python packages
 https://genome.ucsc.edu/cgi-bin/hgBlat,  
 http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/blat/
 
-### swalign
+## bwa
 
-https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
+https://github.com/lh3/bwa
 
 ### fermi-lite
 
 https://github.com/lh3/fermi-lite
+
+### swalign
+
+https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
 
 ## Install
 
@@ -34,7 +38,7 @@ path/to/blat -makeOoc=ref/11.ooc -repMatch=2253 -tileSize=11 ref/GRCh37.2bit /de
 ```
 
 ## Command (how to use)
-EBbreak consists of five steps.
+onebreak consists of five steps.
 
 ### parse
 ```
