@@ -4,10 +4,24 @@ empirical bayesian framework for detecting somatic breakpoints from sequencing d
 ## Dependency
 ### Python (>= 2.7)
 Python packages
-・pysam
-・annot_utils (https://github.com/friend1ws/annot_utils)
-・swalign
+ - pysam (https://github.com/pysam-developers/pysam, https://pysam.readthedocs.io/en/latest/api.html)
+ - annot_utils (https://github.com/friend1ws/annot_utils)
+ - numpy
+ - scipy
+ - statistics
+
 ### blat
+
+https://genome.ucsc.edu/cgi-bin/hgBlat,  
+http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/blat/
+
+### swalign
+
+https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
+
+### fermi-lite
+
+https://github.com/lh3/fermi-lite
 
 ## Install
 
