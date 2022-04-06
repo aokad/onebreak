@@ -27,16 +27,6 @@ https://github.com/lh3/fermi-lite
 
 https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
 
-## Install
-
-## Preparation
-When using blat -ooc option, prepare ooc file before usage.
-```
-cd path/to/EBbreak
-path/to/faToTwoBit ref/GRCh37.fa ref/GRCh37.2bit
-path/to/blat -makeOoc=ref/11.ooc -repMatch=2253 -tileSize=11 ref/GRCh37.2bit /dev/null /dev/null
-```
-
 ## Command (how to use)
 onebreak consists of five steps.
 
