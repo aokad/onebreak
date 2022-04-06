@@ -15,7 +15,7 @@ Python packages
 https://genome.ucsc.edu/cgi-bin/hgBlat,  
 http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/blat/
 
-## bwa
+### bwa
 
 https://github.com/lh3/bwa
 
@@ -42,15 +42,49 @@ onebreak consists of five steps.
 
 ### parse
 ```
+onebreak parse \
+    ${bam_file} \
+    ${parse_file} \
+    --reference_genome ${reference}
 ```
+The extension of the ${bam_file} is either .cram or .bam.  
+The extension of the ${parse_file} is .txt.gz.  
 
 ### merge
-
+```
+ls /path/to/onebreak-parse/*.txt.gz > ./merge_input_list.txt
+onebreak merge_control \
+    ./merge_input_list.txt \
+    ${merged_control}
+```
+The extension of the ${merged_control} is .txt.gz.
 
 ### filt
+```
+onebreak filt \
+  --merged_control_file ${merged_control} \
+  ${parse_file} \
+  ${bam_file} \
+  ${filt_file} \
+  ${reference}
+```
+The extension of the ${filt_file} is .txt.gz.
 
 ### contig
-
+```
+onebreak contig \
+    ${filt_file} \
+    ${bam_file} \
+    ${contig_file} \
+    ${reference}
+```
+The extension of the ${contig_file} is .txt.gz.
 
 ### classify
-
+```
+onebreak classify \
+    ${contig_file} \
+    ${classify_file} \
+    ${reference}
+```
+The extension of the ${classify_file} is .txt.
