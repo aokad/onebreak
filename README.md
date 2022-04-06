@@ -30,6 +30,10 @@ https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
 ## Command (how to use)
 onebreak consists of five steps.
 
+### workflow
+
+![image](https://user-images.githubusercontent.com/13672949/161904048-be8bf771-73c5-452a-849d-5696791b2b0f.png)
+
 ### parse
 ```
 onebreak parse \
