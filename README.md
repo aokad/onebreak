@@ -62,7 +62,7 @@ onebreak filt \
   ${filt_file} \
   ${reference}
 ```
-The extension of the ${filt_file} is .txt.gz.
+The extension of the ${filt_file} is .txt.
 
 ### contig
 ```
@@ -72,7 +72,7 @@ onebreak contig \
     ${contig_file} \
     ${reference}
 ```
-The extension of the ${contig_file} is .txt.gz.
+The extension of the ${contig_file} is .txt.
 
 ### classify
 ```
