@@ -32,7 +32,7 @@ onebreak consists of five steps.
 
 ### workflow
 
-![image](https://user-images.githubusercontent.com/13672949/161904048-be8bf771-73c5-452a-849d-5696791b2b0f.png)
+![image](https://user-images.githubusercontent.com/13672949/162120943-a7db6e14-6ea0-4fd2-9b5c-a06cb4a78111.png)
 
 ### parse
 ```
@@ -62,7 +62,7 @@ onebreak filt \
   ${filt_file} \
   ${reference}
 ```
-The extension of the ${filt_file} is .txt.gz.
+The extension of the ${filt_file} is .txt.
 
 ### contig
 ```
@@ -72,7 +72,7 @@ onebreak contig \
     ${contig_file} \
     ${reference}
 ```
-The extension of the ${contig_file} is .txt.gz.
+The extension of the ${contig_file} is .txt.
 
 ### classify
 ```
