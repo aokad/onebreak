@@ -180,6 +180,7 @@ def create_parser():
     # contig.add_argument("--swalign_score", type = int, default = 35,
     #               help = "threshould of minimum Waterman-Smith alignment score (default: %(default)s)")
 
+    contig.add_argument("--debug", default = False, action = 'store_true', help = "keep intermediate files")
     contig.set_defaults(func = contig_main)
 
     ####################

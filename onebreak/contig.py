@@ -9,7 +9,7 @@ from .filt import get_target_bp
 from . import my_seq
 from .swalign import *
 
-def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lite_option = "-l 20", swalign_score_thres = 35):
+def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lite_option = "-l 20", swalign_score_thres = 35, temp_key = "", debug = False):
 
     match = 2
     mismatch = -1
@@ -17,15 +17,15 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
 
     sw = LocalAlignment(scoring)  # you can also choose gap penalties, etc...
 
-    hout = open(tmp_file_path + ".tmp3.assemble_input.fa", 'w')
+    hout = open(tmp_file_path + ".tmp3.assemble_input.%s.fa" % temp_key, 'w')
     for tid in sorted(readid2seq):
         print('>' + tid, file = hout)
         print(readid2seq[tid], file = hout)
     hout.close()
    
     fermi_lite_options = fermi_lite_option.split(' ')
-    hout = open(tmp_file_path + ".tmp3.assemble_output.fq", 'w')
-    sret = subprocess.call(["fml-asm"] + fermi_lite_options + [tmp_file_path + ".tmp3.assemble_input.fa"], stdout = hout) 
+    hout = open(tmp_file_path + ".tmp3.assemble_output.%s.fq" % temp_key, 'w')
+    sret = subprocess.call(["fml-asm"] + fermi_lite_options + [tmp_file_path + ".tmp3.assemble_input.%s.fa" % temp_key], stdout = hout) 
     hout.close()
 
     if sret != 0:
@@ -35,7 +35,7 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
     line_num = 0
     temp_contig = ""
     temp_contig_all = ""
-    with open(tmp_file_path + ".tmp3.assemble_output.fq", 'r') as hin:
+    with open(tmp_file_path + ".tmp3.assemble_output.%s.fq" % temp_key, 'r') as hin:
         for line in hin:
             line_num = line_num + 1
             if line_num % 4 == 2:
@@ -56,15 +56,16 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
                         temp_contig_all = my_seq.reverse_complement(tseq)            
 
 
-    subprocess.call(["rm", "-rf", tmp_file_path + ".tmp3.assemble_input.fa"])
-    subprocess.call(["rm", "-rf", tmp_file_path + ".tmp3.assemble_output.fq"])
+    if debug == False:
+        subprocess.call(["rm", "-rf", tmp_file_path + ".tmp3.assemble_input.%s.fa" % temp_key])
+        subprocess.call(["rm", "-rf", tmp_file_path + ".tmp3.assemble_output.%s.fq" % temp_key])
 
     if temp_contig == "": temp_contig = "---" 
     if temp_contig_all == "": temp_contig_all = "---"
     return [temp_contig, temp_contig_all]
 
 
-def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_contig_length, fermi_lite_option, swalign_length = 20, swalign_score = 35):
+def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_contig_length, fermi_lite_option, swalign_length = 20, swalign_score = 35, debug = False):
 
     seq_filename, seq_ext = os.path.splitext(tumor_bam)
     if seq_ext == ".cram":
@@ -122,7 +123,7 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
                 if len(temp_id2seq) > 0:
                     # print(temp_key)
                     tchr, tpos, tdir, tjuncseq = temp_key.split(',')
-                    key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file, fermi_lite_option, swalign_score)
+                    key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file, fermi_lite_option, swalign_score, temp_key, debug)
 
                 temp_key = F[0]
                 temp_id2seq = {}
@@ -136,7 +137,7 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
 
         if len(temp_id2seq) > 0:
             tchr, tpos, tdir, tjuncseq = temp_key.split(',') 
-            key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file, fermi_lite_option, swalign_score)
+            key2contig[temp_key], key2contig_all[temp_key] = assemble_seq(temp_id2seq, temp_junc_seq, tjuncseq, output_file, fermi_lite_option, swalign_score, temp_key, debug)
 
 
     hout = open(output_file, 'w')
@@ -159,7 +160,8 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
 
     hout.close()
 
-    subprocess.call(["rm", "-rf", output_file + ".tmp2.contig.sorted"])
-    subprocess.call(["rm", "-rf", output_file + ".tmp2.contig.unsorted"])
+    if debug == False:
+        subprocess.call(["rm", "-rf", output_file + ".tmp2.contig.sorted"])
+        subprocess.call(["rm", "-rf", output_file + ".tmp2.contig.unsorted"])
 
 
