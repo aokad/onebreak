@@ -18,8 +18,8 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
 
     #sw = LocalAlignment(scoring)  # you can also choose gap penalties, etc...
 
-    user_matrix = parasail.matrix_create("ACGT", 1, -2)
-    #user_matrix = parasail.matrix_create("ACGT", match, mismatch)
+    #user_matrix = parasail.matrix_create("ACGT", 1, -2)
+    user_matrix = parasail.matrix_create("ACGT", match, mismatch)
     parasail_score_thres = 17.5
 
     hout = open(tmp_file_path + ".tmp3.assemble_input.%s.fa" % temp_key, 'w')
