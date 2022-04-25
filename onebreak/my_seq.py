@@ -5,8 +5,10 @@ import math
 
 def get_seq(reference, chr, start, end):
 
-    seq = ""    
-    for item in pysam.faidx(reference, chr + ":" + str(start) + "-" + str(end)):
+    seq = ""
+#    for item in pysam.faidx(reference, chr + ":" + str(start) + "-" + str(end)):
+    for item in pysam.faidx(reference, chr + ":" + str(start) + "-" + str(end)).split("\n"):
+        if item == "": continue
         if item[0] == ">": continue
         seq = seq + item.rstrip('\n').upper()
     seq = seq.replace('>', '')
@@ -21,5 +23,3 @@ def reverse_complement(seq):
                   'B': 'V', 'V': 'B', 'D': 'H', 'H': 'D', 'N': 'N'}
 
     return("".join(complement.get(base, base) for base in reversed(seq)))
-
-

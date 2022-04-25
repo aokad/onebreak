@@ -129,9 +129,9 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
                 temp_id2seq = {}
                 FF = temp_key.split(',')
                 if FF[2] == "+":
-                    temp_junc_seq = my_seq.get_seq(reference_genome, FF[0], int(FF[1]) - swalign_length, int(FF[1]))
+                    temp_junc_seq = my_seq.get_seq(reference_genome, FF[0], int(FF[1]) - swalign_length + 1, int(FF[1]))
                 else:
-                    temp_junc_seq = my_seq.reverse_complement(my_seq.get_seq(reference_genome, FF[0], int(FF[1]), int(FF[1]) + swalign_length))
+                    temp_junc_seq = my_seq.reverse_complement(my_seq.get_seq(reference_genome, FF[0], int(FF[1]), int(FF[1]) + swalign_length + 1))
 
             temp_id2seq[F[1]] = F[2]
 
