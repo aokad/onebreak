@@ -7,15 +7,20 @@ import annot_utils.gene, annot_utils.exon
 
 from .filt import get_target_bp
 from . import my_seq
-from .swalign import *
+#from .swalign import *
+import parasail
 
 def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lite_option = "-l 20", swalign_score_thres = 35, temp_key = "", debug = False):
 
     match = 2
     mismatch = -1
-    scoring = NucleotideScoringMatrix(match, mismatch)
+    #scoring = NucleotideScoringMatrix(match, mismatch)
 
-    sw = LocalAlignment(scoring)  # you can also choose gap penalties, etc...
+    #sw = LocalAlignment(scoring)  # you can also choose gap penalties, etc...
+
+    user_matrix = parasail.matrix_create("ACGT", 1, -2)
+    #user_matrix = parasail.matrix_create("ACGT", match, mismatch)
+    parasail_score_thres = 17.5
 
     hout = open(tmp_file_path + ".tmp3.assemble_input.%s.fa" % temp_key, 'w')
     for tid in sorted(readid2seq):
@@ -31,7 +36,7 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
     if sret != 0:
         print("fml-asm error, error code: " + str(sret), file = sys.stderr)
         sys.exit()
- 
+
     line_num = 0
     temp_contig = ""
     temp_contig_all = ""
@@ -41,16 +46,22 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
             if line_num % 4 == 2:
                 tseq = line.rstrip('\n')
 
-                aln_1 = sw.align(tseq, pre_juncseq)
-                if aln_1.score >= swalign_score_thres:
-                    ttcontig = tseq[aln_1.r_end:]
+                #aln_1 = sw.align(tseq, pre_juncseq)
+                aln_1 = parasail.ssw(tseq, pre_juncseq, 3, 1, user_matrix)
+                #if aln_1.score >= swalign_score_thres:
+                if aln_1.score1 >= parasail_score_thres:
+                    #ttcontig = tseq[aln_1.r_end:]
+                    ttcontig = tseq[aln_1.read_end1+1:]
                     if ttcontig[:8] == post_juncseq and len(ttcontig) > len(temp_contig): 
                         temp_contig = ttcontig
                         temp_contig_all = tseq
 
-                aln_2 = sw.align(tseq, my_seq.reverse_complement(pre_juncseq))
-                if aln_2.score >= swalign_score_thres:
-                    ttcontig = my_seq.reverse_complement(tseq[:aln_2.r_pos])
+                #aln_2 = sw.align(tseq, my_seq.reverse_complement(pre_juncseq))
+                aln_2 = parasail.ssw(tseq, my_seq.reverse_complement(pre_juncseq), 3, 1, user_matrix)
+                #if aln_2.score >= swalign_score_thres:
+                if aln_2.score1 >= parasail_score_thres:
+                    #ttcontig = my_seq.reverse_complement(tseq[:aln_2.r_pos])
+                    ttcontig = my_seq.reverse_complement(tseq[:aln_2.read_begin1])
                     if ttcontig[:8] == post_juncseq and len(ttcontig) > len(temp_contig): 
                         temp_contig = ttcontig
                         temp_contig_all = my_seq.reverse_complement(tseq)            
