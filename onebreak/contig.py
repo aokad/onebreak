@@ -20,7 +20,7 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
 
     #user_matrix = parasail.matrix_create("ACGT", 1, -2)
     user_matrix = parasail.matrix_create("ACGT", match, mismatch)
-    parasail_score_thres = 17.5
+    parasail_score_thres = 35
 
     hout = open(tmp_file_path + ".tmp3.assemble_input.%s.fa" % temp_key, 'w')
     for tid in sorted(readid2seq):
@@ -47,7 +47,7 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
                 tseq = line.rstrip('\n')
 
                 #aln_1 = sw.align(tseq, pre_juncseq)
-                aln_1 = parasail.ssw(tseq, pre_juncseq, 3, 1, user_matrix)
+                aln_1 = parasail.ssw(tseq, pre_juncseq, 1, 1, user_matrix)
                 #if aln_1.score >= swalign_score_thres:
                 if aln_1.score1 >= parasail_score_thres:
                     #ttcontig = tseq[aln_1.r_end:]
@@ -57,7 +57,7 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
                         temp_contig_all = tseq
 
                 #aln_2 = sw.align(tseq, my_seq.reverse_complement(pre_juncseq))
-                aln_2 = parasail.ssw(tseq, my_seq.reverse_complement(pre_juncseq), 3, 1, user_matrix)
+                aln_2 = parasail.ssw(tseq, my_seq.reverse_complement(pre_juncseq), 1, 1, user_matrix)
                 #if aln_2.score >= swalign_score_thres:
                 if aln_2.score1 >= parasail_score_thres:
                     #ttcontig = my_seq.reverse_complement(tseq[:aln_2.r_pos])
