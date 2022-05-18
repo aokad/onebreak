@@ -82,3 +82,12 @@ onebreak classify \
     ${reference}
 ```
 The extension of the ${classify_file} is .txt.
+
+### mei
+```
+onebreak mei \
+    ${contig_file} \
+    ${mei_file} \
+    ${reference}
+```
+The extension of the ${mei_file} is .txt.

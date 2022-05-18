@@ -108,9 +108,10 @@ def merge_control_main(args):
         print("Error in indexing merged junction file", file = sys.stderr)
         sys.exit(1)
 
-    subprocess.call(["rm", "-f", args.output_file + ".unsorted.txt"])
-    subprocess.call(["rm", "-f", args.output_file + ".sorted.txt"])
-    subprocess.call(["rm", "-f", args.output_file + ".merged.txt"])
+    if not args.debug:
+        subprocess.call(["rm", "-f", args.output_file + ".unsorted.txt"])
+        subprocess.call(["rm", "-f", args.output_file + ".sorted.txt"])
+        subprocess.call(["rm", "-f", args.output_file + ".merged.txt"])
 
 
 def filt_main(args):
@@ -158,7 +159,7 @@ def classify_main(args):
 
 
     classify.classify_by_contig_alignment(args.contig_result_file, args.output_file, args.reference_genome, 
-                                          args.te_seq, args.simple_repeat, args.remove_rna)
+                                          args.te_seq, args.simple_repeat, args.remove_rna, debug = args.debug)
 
     # classify.classify_canonicalSV(args.tumor_bp_contig_file, args.output_canonical_file + ".tmp1.txt")
     
@@ -174,3 +175,8 @@ def classify_main(args):
 
     #subprocess.call(["rm", "-f", args.output_canonical_file + ".tmp1.txt"])
     #subprocess.call(["rm", "-f", args.output_canonical_file + ".tmp2.txt"])
+
+def mei_main(args):
+
+    mei.generate_mei(args.contig_result_file, args.output_file, args.reference_genome, debug = args.debug)
+

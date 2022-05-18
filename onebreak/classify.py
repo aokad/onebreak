@@ -306,7 +306,7 @@ def remove_dup_sv(qname2sv_key):
 
 
 
-def classify_by_contig_alignment(input_file, output_file, reference_genome, te_seq = None,  simple_repeat = None, remove_rna = None, bwa_option = "-T0 -h300"):
+def classify_by_contig_alignment(input_file, output_file, reference_genome, te_seq = None,  simple_repeat = None, remove_rna = None, bwa_option = "-T0 -h300, debug = False"):
 
     if remove_rna:
         genome_id, is_grc = check_reference(reference_genome)
@@ -480,16 +480,16 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, te_s
 
             print('\t'.join(print_list), file = hout)
             
+    if debug == False:
+        subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.fa"])
+        subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.human.sam"])
 
-    subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.fa"])
-    subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.human.sam"])
-    if remove_rna:
+    if remove_rna or debug == False:
         subprocess.check_call(["rm", "-rf", refseq_junc_info])
         subprocess.check_call(["rm", "-rf", refseq_junc_info + ".tbi"])
         subprocess.check_call(["rm", "-rf", gencode_junc_info])
         subprocess.check_call(["rm", "-rf", gencode_junc_info + ".tbi"])
 
-    if te_seq is not None: subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.te.sam"])
-   
+    if te_seq is not None and debug == False:
+        subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.te.sam"])
 
- 
