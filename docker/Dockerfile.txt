@@ -1,10 +1,9 @@
 FROM ubuntu:20.04
-MAINTAINER Yuichi Shiraishi <friend1ws@gmail.com> 
-
+MAINTAINER Ai Okada <aokada@ncc.go.jp> 
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bzip2 \
-    cpio
+    cpio \
     g++ \
     gcc \
     git \
@@ -22,14 +21,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     zlib1g-dev
 
-RUN wget https://github.com/samtools/htslib/releases/download/1.7/htslib-1.7.tar.bz2 && \
+RUN wget -q https://github.com/samtools/htslib/releases/download/1.7/htslib-1.7.tar.bz2 && \
     tar jxvf htslib-1.7.tar.bz2 && \
     cd htslib-1.7 && \
     ./configure && \
     make && \
     make install 
 
-RUN wget https://github.com/lh3/bwa/releases/download/v0.7.17/bwa-0.7.17.tar.bz2 && \
+RUN wget -q https://github.com/lh3/bwa/releases/download/v0.7.17/bwa-0.7.17.tar.bz2 && \
     tar jxvf bwa-0.7.17.tar.bz2 && \
     cd bwa-0.7.17 && \
     make 
@@ -56,7 +55,7 @@ RUN pip3 install --upgrade setuptools && \
 #    pip3 install . 
 
 # required by parasail
-RUN wget https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/archive/v1.1.tar.gz && \
+RUN wget -q https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/archive/v1.1.tar.gz && \
     tar zxvf v1.1.tar.gz && \
     cd Complete-Striped-Smith-Waterman-Library-1.1/src && \
     gcc -Wall -O3 -pipe -fPIC -shared -rdynamic -o libssw.so ssw.c ssw.h
@@ -64,13 +63,13 @@ RUN wget https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/arch
 ENV LD_LIBRARY_PATH /Complete-Striped-Smith-Waterman-Library-1.1/src:$LD_LIBRARY_PATH
 
 # RepeatMasker
-RUN wget https://www.repeatmasker.org/RepeatMasker/RepeatMasker-4.1.2-p1.tar.gz && \
+RUN wget -q https://www.repeatmasker.org/RepeatMasker/RepeatMasker-4.1.2-p1.tar.gz && \
     tar zxvf RepeatMasker-4.1.2-p1.tar.gz && \
-    mv RepeatMasker /usr/local/ && \
+    mv RepeatMasker /usr/local/
 
 ENV PATH /usr/local/RepeatMasker:$PATH
 
-RUN wget https://github.com/Benson-Genomics-Lab/TRF/archive/refs/tags/v4.09.1.tar.gz && \
+RUN wget -q https://github.com/Benson-Genomics-Lab/TRF/archive/refs/tags/v4.09.1.tar.gz && \
     tar zxvf v4.09.1.tar.gz && \
     cd TRF-4.09.1/ && \
     ./configure && \
@@ -80,10 +79,10 @@ RUN wget https://github.com/Benson-Genomics-Lab/TRF/archive/refs/tags/v4.09.1.ta
 #    tar zxvf rmblast-2.11.0+-x64-linux.tar.gz && \
 #    mv rmblast-2.11.0/bin/* /usr/local/bin/
 
-RUN wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.11.0/ncbi-blast-2.11.0+-src.tar.gz && \
+RUN wget -q ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.11.0/ncbi-blast-2.11.0+-src.tar.gz && \
     tar xzvf ncbi-blast-2.11.0+-src.tar.gz && \
     cd ncbi-blast-2.11.0+-src/ && \
-    wget http://www.repeatmasker.org/isb-2.11.0+-rmblast.patch.gz && \
+    wget -q http://www.repeatmasker.org/isb-2.11.0+-rmblast.patch.gz && \
     gunzip isb-2.11.0+-rmblast.patch.gz && \
     sed -i "s#https://www.repeatmasker.org/rmblast/stat#https://localhost/#" isb-2.11.0+-rmblast.patch && \
     patch -p1 < isb-2.11.0+-rmblast.patch && \
@@ -92,14 +91,18 @@ RUN wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.11.0/ncbi-blast-2
     make -j "$(nproc)" && \
     make install
 
-#cd /usr/local/RepeatMasker
-#perl ./configure 
+RUN cd /usr/local/RepeatMasker && \
+    perl ./configure \
+        -trf_prgm /usr/local/bin/trf \
+        -rmblast_dir /usr/local/rmblast-2.11.0/bin \
+        -hmmer_dir /usr/local/hmmer/bin \
+        -crossmatch_dir /usr/local/phrap \
+        -abblast_dir /usr/local/abblast \
+        -libdir /usr/local/RepeatMasker/Libraries \
+        -default_search_engine rmblast
 
 # COPY EBbreak_modified.tar.gz /
 
 RUN git clone https://github.com/aokad/onebreak.git && \
     cd onebreak && \
     pip3 install .
-
-
-
