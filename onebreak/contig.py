@@ -76,7 +76,7 @@ def assemble_seq(readid2seq, pre_juncseq, post_juncseq, tmp_file_path, fermi_lit
     return [temp_contig, temp_contig_all]
 
 
-def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_contig_length, fermi_lite_option, swalign_length = 20, swalign_score = 35, debug = False):
+def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_contig_length, fermi_lite_option, sort_option, swalign_length = 20, swalign_score = 35, debug = False):
 
     seq_filename, seq_ext = os.path.splitext(tumor_bam)
     if seq_ext == ".cram":
@@ -118,7 +118,7 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
     hout.close()
 
     hout = open(output_file + ".tmp2.contig.sorted", 'w')
-    subprocess.call(["sort", "-k1,1", output_file + ".tmp2.contig.unsorted"], stdout = hout)
+    subprocess.call(["sort", "-k1,1"] + sort_option.split(" ") + [output_file + ".tmp2.contig.unsorted"], stdout = hout)
     hout.close()
 
 

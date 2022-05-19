@@ -12,6 +12,7 @@ def create_parser():
 
     subparsers = parser.add_subparsers()
 
+    default_sort_option = "-S 1G -T /tmp"
 
     ####################
     # parse
@@ -42,6 +43,8 @@ def create_parser():
     parse.add_argument("--reference_genome", metavar = "reference.fa", type = str, default = None,
                         help = "path to reference genome")
 
+    parse.add_argument("--sort_option", metavar = default_sort_option, type = str, default = default_sort_option, help = "options for sort command")
+
     parse.set_defaults(func = parse_main)
 
     ####################
@@ -61,6 +64,8 @@ def create_parser():
 
     merge_control.add_argument("--sample_num_thres", type = int, default = 2,
                                help = "register breakpoints at least shared by specified number of samples (default: %(default)s)")
+
+    merge_control.add_argument("--sort_option", metavar = default_sort_option, type = str, default = default_sort_option, help = "options for sort command")
 
     merge_control.add_argument("--debug", default = False, action = 'store_true', help = "keep intermediate files")
 
@@ -184,6 +189,8 @@ def create_parser():
     # contig.add_argument("--swalign_score", type = int, default = 35,
     #               help = "threshould of minimum Waterman-Smith alignment score (default: %(default)s)")
 
+    contig.add_argument("--sort_option", metavar = default_sort_option, type = str, default = default_sort_option, help = "options for sort command")
+
     contig.add_argument("--debug", default = False, action = 'store_true', help = "keep intermediate files")
     contig.set_defaults(func = contig_main)
 
@@ -233,6 +240,8 @@ def create_parser():
 
     classify.add_argument("--remove_rna", default = False, action = "store_true",
                           help = "remove putative rna splicing junction contamination (default: %(default)s)")
+
+    classify.add_argument("--sort_option", metavar = default_sort_option, type = str, default = default_sort_option, help = "options for sort command")
 
     classify.add_argument("--debug", default = False, action = 'store_true', help = "keep intermediate files")
 

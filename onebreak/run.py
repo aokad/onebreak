@@ -13,7 +13,7 @@ def parse_main(args):
     parse.cluster_breakpoint(args.output_file + ".bp.tmp.txt", args.output_file + ".bp.clustered.tmp.txt", args.check_interval)
 
     hout = open(args.output_file + ".bp.clustered.sorted.tmp.txt", 'w')
-    s_ret = subprocess.call(["sort", "-k1,1", "-k2,2n", "-k3,3n", args.output_file + ".bp.clustered.tmp.txt"], stdout = hout)
+    s_ret = subprocess.call(["sort", "-k1,1", "-k2,2n", "-k3,3n"] + args.sort_option.split(" ") + [args.output_file + ".bp.clustered.tmp.txt"], stdout = hout)
     hout.close()
 
     if s_ret != 0:
@@ -63,7 +63,7 @@ def merge_control_main(args):
                 
 
     hout = open(args.output_file + ".sorted.txt", 'w')
-    s_ret = subprocess.call(["sort", "-k1,1", "-k2,2n", "-k3,3n", "-k4,4", args.output_file + ".unsorted.txt"], stdout = hout)
+    s_ret = subprocess.call(["sort", "-k1,1", "-k2,2n", "-k3,3n", "-k4,4"] + args.sort_option.split(" ") + [args.output_file + ".unsorted.txt"], stdout = hout)
     hout.close()
 
     if s_ret != 0:
@@ -143,7 +143,7 @@ def long_read_validate_main(args):
 def contig_main(args):
 
     contig.generate_contig(args.tumor_bp_filt_file, args.output_file,
-                           args.tumor_bam, args.reference_genome, args.min_contig_length, args.fermi_lite_option,
+                           args.tumor_bam, args.reference_genome, args.min_contig_length, args.fermi_lite_option, args.sort_option,
                            debug = args.debug)
 
     # contig.alignment_contig(args.tumor_bp_filt_file, args.output_file + ".tmp.filt4.txt", args.output_file, 
@@ -159,7 +159,7 @@ def classify_main(args):
 
 
     classify.classify_by_contig_alignment(args.contig_result_file, args.output_file, args.reference_genome, 
-                                          args.te_seq, args.simple_repeat, args.remove_rna, debug = args.debug)
+                                          args.te_seq, args.simple_repeat, args.remove_rna, sort_option = args.sort_option, debug = args.debug)
 
     # classify.classify_canonicalSV(args.tumor_bp_contig_file, args.output_canonical_file + ".tmp1.txt")
     

@@ -245,7 +245,7 @@ def rna_junction_check(chr, start, end, ref_junc_tb, ens_junc_tb, margin = 2):
 
 
 
-def remove_dup_sv(qname2sv_key):
+def remove_dup_sv(qname2sv_key, sort_option):
 
     tmp_dir = tempfile.mkdtemp()
     qname2dup_flag = {}
@@ -262,7 +262,7 @@ def remove_dup_sv(qname2sv_key):
                 print('\t'.join([tchr1, tstart1, tend1, tchr2, tstart2, tend2, qname, tinseq, tdir1, tdir2]), file = hout)
 
     with open(tmp_dir + "/qname2sv_key.tmp.sorted.txt", 'w') as hout:
-        subprocess.call(["sort", "-k1,1", "-k3,3n", "-k4,4", "-k6,6n", tmp_dir + "/qname2sv_key.tmp.txt"], stdout = hout) 
+        subprocess.call(["sort", "-k1,1", "-k3,3n", "-k4,4", "-k6,6n"] + sort_option.split(" ") + [tmp_dir + "/qname2sv_key.tmp.txt"], stdout = hout) 
 
     
     key2info = {}
@@ -306,7 +306,7 @@ def remove_dup_sv(qname2sv_key):
 
 
 
-def classify_by_contig_alignment(input_file, output_file, reference_genome, te_seq = None,  simple_repeat = None, remove_rna = None, bwa_option = "-T0 -h300, debug = False"):
+def classify_by_contig_alignment(input_file, output_file, reference_genome, te_seq = None,  simple_repeat = None, remove_rna = None, bwa_option = "-T0 -h300, debug = False", sort_option = ""):
 
     if remove_rna:
         genome_id, is_grc = check_reference(reference_genome)
@@ -389,7 +389,7 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, te_s
         else:
             qname2alignment_str[temp_qname] = "---"
 
-    qname2dup_flag = remove_dup_sv(qname2sv_key)
+    qname2dup_flag = remove_dup_sv(qname2sv_key, sort_option)
 
     samfile.close()
 
