@@ -178,5 +178,5 @@ def classify_main(args):
 
 def mei_main(args):
 
-    mei.generate_mei(args.contig_result_file, args.output_file, args.reference_genome, debug = args.debug)
+    mei.generate_mei(args.contig_result_file, args.output_file, debug = args.debug)
 
