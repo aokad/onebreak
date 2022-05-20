@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import sys, os, gzip, subprocess
 # from . import parse, filt, contig, classify
-from . import parse, filt, contig, classify, long_read_validate
+from . import parse, filt, contig, classify, mei, long_read_validate
 
 def parse_main(args):
 
