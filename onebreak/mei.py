@@ -111,7 +111,7 @@ def summarize_rmsk(input_file, seq_len_file, output_file):
             repeat_class, L1_ratio, Alu_ratio, SVA_ratio, repeat_info = proc_rmsk_info(seq_len[temp_key], temp_rmsk_info)
             print(temp_key + '\t' + repeat_class + '\t' + L1_ratio + '\t' + Alu_ratio + '\t' + SVA_ratio + '\t' + ';'.join(repeat_info), file = hout)
 
-def insert_classify_main(sv_list_file, output_file, debug = False):
+def generate_mei(sv_list_file, output_file, debug = False):
 
     make_fasta_file(sv_list_file, output_file + ".tmp.fasta", output_file + ".tmp.seq_len.txt")
 
