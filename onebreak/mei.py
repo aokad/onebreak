@@ -118,6 +118,7 @@ def generate_mei(sv_list_file, output_file, debug = False):
     ##########
     # repeat masker
     tmp_dir = os.path.dirname(output_file) + "/RepeatMasker.tmp"
+    subprocess.call(["rm", "-rf", tmp_dir])
     os.makedirs(tmp_dir, exist_ok=True)
     subprocess.check_call(["RepeatMasker", "-species", "human", output_file + ".tmp.fasta", "-dir", tmp_dir])
 
@@ -158,11 +159,11 @@ if __name__ == '__main__':
 
     sv_list_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/TCGA-2H-A9GG-01A-11R-A37I-31/TCGA-2H-A9GG-01A-11R-A37I-31.onebreak-contig.txt"
     output_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/TCGA-2H-A9GG-01A-11R-A37I-31/TCGA-2H-A9GG-01A-11R-A37I-31.onebreak-mei.txt"
-    insert_classify_main(sv_list_file, output_file, debug = True)
+    generate_mei(sv_list_file, output_file, debug = True)
 
     #for sample in ["TCGA-2H-A9GG-01A-11R-A37I-31", "TCGA-2H-A9GN-01A-11R-A37I-31", "TCGA-IC-A6RE-01A-11R-A336-31", "TCGA-IG-A3QL-01A-11R-A24K-31", "TCGA-IG-A50L-01A-11R-A260-31", "TCGA-L5-A4OS-01A-11R-A28J-31", "TCGA-L5-A8NF-01A-11R-A37I-31", "TCGA-LN-A4A1-01A-21R-A260-31", "TCGA-R6-A8W5-01B-11R-A37I-31", "TCGA-V5-AASX-11A-11R-A38D-31"]:
     #
     #    sv_list_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/{sample}/{sample}.onebreak-contig.txt".format(sample = sample)
     #    output_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/{sample}/{sample}.onebreak-classify-RepeatMasker.txt".format(sample = sample)
-    #    insert_classify_main(sv_list_file, output_file)
+    #    generate_mei(sv_list_file, output_file)
 
