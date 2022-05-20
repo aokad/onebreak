@@ -306,7 +306,7 @@ def remove_dup_sv(qname2sv_key, sort_option):
 
 
 
-def classify_by_contig_alignment(input_file, output_file, reference_genome, te_seq = None,  simple_repeat = None, remove_rna = None, bwa_option = "-T0 -h300, debug = False", sort_option = ""):
+def classify_by_contig_alignment(input_file, output_file, reference_genome, te_seq = None,  simple_repeat = None, remove_rna = None, bwa_option = "-T0 -h300", debug = False, sort_option = ""):
 
     if remove_rna:
         genome_id, is_grc = check_reference(reference_genome)
