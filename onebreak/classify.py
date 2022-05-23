@@ -484,12 +484,12 @@ def classify_by_contig_alignment(input_file, output_file, reference_genome, te_s
         subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.fa"])
         subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.human.sam"])
 
-    if remove_rna or debug == False:
-        subprocess.check_call(["rm", "-rf", refseq_junc_info])
-        subprocess.check_call(["rm", "-rf", refseq_junc_info + ".tbi"])
-        subprocess.check_call(["rm", "-rf", gencode_junc_info])
-        subprocess.check_call(["rm", "-rf", gencode_junc_info + ".tbi"])
+        if remove_rna:
+            subprocess.check_call(["rm", "-rf", refseq_junc_info])
+            subprocess.check_call(["rm", "-rf", refseq_junc_info + ".tbi"])
+            subprocess.check_call(["rm", "-rf", gencode_junc_info])
+            subprocess.check_call(["rm", "-rf", gencode_junc_info + ".tbi"])
 
-    if te_seq is not None and debug == False:
-        subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.te.sam"])
+        if te_seq is not None:
+            subprocess.call(["rm", "-rf", output_file + ".tmp4.alignment_check.te.sam"])
 
