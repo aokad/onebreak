@@ -89,6 +89,9 @@ def summarize_rmsk(input_file, seq_len_file, output_file):
     temp_key = ''
     temp_rmsk_info = []
 
+    if not os.path.exist(input_file):
+        open(input_file, 'w').close()
+
     with open(input_file, 'r') as hin, open(output_file, 'w') as hout:
         #print('\t'.join(['Key', 'Repeat_Class', 'L1_Ratio', 'Alu_Ratio', 'SVA_Ratio', 'Repeat_Info']), file = hout)
         for line in hin:
@@ -122,7 +125,7 @@ def generate_mei(sv_list_file, output_file, debug = False):
     os.makedirs(tmp_dir, exist_ok=True)
     subprocess.check_call(["RepeatMasker", "-species", "human", output_file + ".tmp.fasta", "-dir", tmp_dir])
 
-    summarize_rmsk(tmp_dir + '/' + os.path.basename(output_file + ".tmp.fasta") + ".out", output_file + ".tmp.seq_len.txt", output_file + ".tmp.rmsk.txt")
+    summarize_rmsk(tmp_dir + '/' + os.path.basename(output_file + ".tmp.fasta") + "2170064", output_file + ".tmp.seq_len.txt", output_file + ".tmp.rmsk.txt")
 
     rmsk = {}
     with open(output_file + ".tmp.rmsk.txt", 'r') as hin:
