@@ -89,7 +89,7 @@ def summarize_rmsk(input_file, seq_len_file, output_file):
     temp_key = ''
     temp_rmsk_info = []
 
-    if not os.path.exist(input_file):
+    if not os.path.exists(input_file):
         open(input_file, 'w').close()
 
     with open(input_file, 'r') as hin, open(output_file, 'w') as hout:
