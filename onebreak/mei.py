@@ -125,7 +125,7 @@ def generate_mei(sv_list_file, output_file, debug = False):
     os.makedirs(tmp_dir, exist_ok=True)
     subprocess.check_call(["RepeatMasker", "-species", "human", output_file + ".tmp.fasta", "-dir", tmp_dir])
 
-    summarize_rmsk(tmp_dir + '/' + os.path.basename(output_file + ".tmp.fasta") + "2170064", output_file + ".tmp.seq_len.txt", output_file + ".tmp.rmsk.txt")
+    summarize_rmsk(tmp_dir + '/' + os.path.basename(output_file + ".tmp.fasta") + ".out", output_file + ".tmp.seq_len.txt", output_file + ".tmp.rmsk.txt")
 
     rmsk = {}
     with open(output_file + ".tmp.rmsk.txt", 'r') as hin:
