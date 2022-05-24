@@ -91,6 +91,8 @@ RUN wget -q ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.11.0/ncbi-blas
     make -j "$(nproc)" && \
     make install
 
+ENV PATH /usr/local/rmblast-2.11.0:$PATH
+
 RUN cd /usr/local/RepeatMasker && \
     perl ./configure \
         -trf_prgm /usr/local/bin/trf \
@@ -103,8 +105,8 @@ RUN cd /usr/local/RepeatMasker && \
 
 # COPY EBbreak_modified.tar.gz /
 
-RUN wget -q https://github.com/aokad/onebreak/archive/refs/tags/v0.1.0b8.zip && \
-    unzip v0.1.0b8.zip && \
-    rm v0.1.0b8.zip && \
-    cd onebreak-0.1.0b8 && \
+RUN wget -q https://github.com/aokad/onebreak/archive/refs/tags/v0.1.0b9.zip && \
+    unzip v0.1.0b9.zip && \
+    rm v0.1.0b9.zip && \
+    cd onebreak-0.1.0b9 && \
     pip3 install .
