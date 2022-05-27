@@ -142,9 +142,11 @@ def long_read_validate_main(args):
 
 def contig_main(args):
 
-    contig.generate_contig(args.tumor_bp_filt_file, args.output_file,
+    contig.generate_contig(args.tumor_bp_filt_file, args.output_file + ".tmp1.txt",
                            args.tumor_bam, args.reference_genome, args.min_contig_length, args.fermi_lite_option, args.sort_option,
                            debug = args.debug)
+
+    contig.filt_contig(args.output_file + ".tmp1.txt", args.output_file, args.reference_genome, debug = args.debug)
 
     # contig.alignment_contig(args.tumor_bp_filt_file, args.output_file + ".tmp.filt4.txt", args.output_file, 
     #                         args.reference_genome, args.blat_option, args.blat_ooc, args.virus_db, args.repeat_db, args.mitochondria_db, args.adapter_db)
@@ -178,5 +180,5 @@ def classify_main(args):
 
 def mei_main(args):
 
-    mei.generate_mei(args.contig_result_file, args.output_file, debug = args.debug)
-
+    mei.generate_mei(args.contig_result_file, args.output_file + "tmp1.txt", debug = args.debug)
+    mei.annotation(args.output_file, args.output_file, args.bed_mane, args.bed_gencode, args.clinvar_file)

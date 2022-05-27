@@ -155,18 +155,81 @@ def generate_mei(sv_list_file, output_file, debug = False):
         subprocess.call(["rm", "-rf", output_file + ".tmp.rmsk.txt"])
         subprocess.call(["rm", "-rf", tmp_dir])
 
+def tabix(bed_file, region):
+
+    ret = subprocess.check_output(["tabix", bed_file, region])
+    
+    annots = {}
+    for row in ret.decode('utf-8').split("\n"):
+        if row == "": continue
+        F = row.split("\t")
+        len_transcript = int(F[4])
+        name_transcript = F[3]
+        if not len_transcript in annots:
+            annots[len_transcript] = {}
+        if not name_transcript in annots[len_transcript]:
+            annots[len_transcript][name_transcript] = []
+        annots[len_transcript][name_transcript].append(F)
+
+    if annots == {}:
+        return None
+
+    max_len_transcript = max(annots.keys())
+    min_name_transcript = sorted(annots[max_len_transcript].keys())[0]
+    ret_value = annots[max_len_transcript][min_name_transcript]
+    if len(ret_value) > 1:
+        raise Exception(";".join(ret_value))
+    return ret_value[0]
+
+def annotation(input, output_file, bed_mane, bed_gencode, clinvar_file):
+
+    clinvar = {}
+    for l in open(clinvar_file):
+        row = l.rstrip()
+        if row == "": continue
+        F = row.split("\t")
+        for key in F[0].split("|"):
+            if not key in clinvar:
+                clinvar[key] = F
+
+    hout = open(output_file, 'w')
+    with open(sv_list_file, 'r') as hin:
+        header = hin.readline().rstrip('\n').split('\t')
+        header = header + ['annotChr', 'annotStart', 'annotEnd', 'annotNAME', 'annotLen', 'annotStrand', 'annotGene', 'annotMANE', 'clinvarGene', 'clinvarInfo']
+        print('\t'.join(header), file = hout)
+
+        for l in hin:
+            row = l.rstrip("\n")
+            F = row.split("\t")
+            region = "%s:%d-%d" % (F[0], int(F[1])-1, int(F[1]))
+            annot = tabix(bed_mane, region)
+            if annot == None:
+                annot = tabix(bed_gencode, region)
+                if annot == None:
+                    annot = ["---"] * 8
+                else:
+                    annot[-1] = "---"
+
+            gene = annot[6]
+            annot_clinvar = ["---"] * 2
+            if gene in clinvar:
+                annot_clinvar = clinvar[gene]
+
+            hout.write(row + "\t" + "\t".join(annot) + "\t" + "\t".join(annot_clinvar) + "\n")
+    hout.close()
+
 if __name__ == '__main__':
-    #import sys
-    #sv_list_file = sys.argv[1]
-    #output_file = sys.argv[2]
+    pass
 
-    sv_list_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/TCGA-2H-A9GG-01A-11R-A37I-31/TCGA-2H-A9GG-01A-11R-A37I-31.onebreak-contig.txt"
-    output_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/TCGA-2H-A9GG-01A-11R-A37I-31/TCGA-2H-A9GG-01A-11R-A37I-31.onebreak-mei.txt"
-    generate_mei(sv_list_file, output_file, debug = True)
+    #sv_list_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/TCGA-2H-A9GG-01A-11R-A37I-31/TCGA-2H-A9GG-01A-11R-A37I-31.onebreak-contig.txt"
+    #output_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/TCGA-2H-A9GG-01A-11R-A37I-31/TCGA-2H-A9GG-01A-11R-A37I-31.onebreak-mei.txt"
+    #generate_mei(sv_list_file, output_file, debug = True)
 
-    #for sample in ["TCGA-2H-A9GG-01A-11R-A37I-31", "TCGA-2H-A9GN-01A-11R-A37I-31", "TCGA-IC-A6RE-01A-11R-A336-31", "TCGA-IG-A3QL-01A-11R-A24K-31", "TCGA-IG-A50L-01A-11R-A260-31", "TCGA-L5-A4OS-01A-11R-A28J-31", "TCGA-L5-A8NF-01A-11R-A37I-31", "TCGA-LN-A4A1-01A-21R-A260-31", "TCGA-R6-A8W5-01B-11R-A37I-31", "TCGA-V5-AASX-11A-11R-A38D-31"]:
-    #
-    #    sv_list_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/{sample}/{sample}.onebreak-contig.txt".format(sample = sample)
-    #    output_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/{sample}/{sample}.onebreak-classify-RepeatMasker.txt".format(sample = sample)
-    #    generate_mei(sv_list_file, output_file)
+    ## annotation
 
+    #BED_MANE = "/home/aiokada/sandbox/onebreak/database/GENCODE/MANE.GRCh38.v1.0.ensembl_genomic.bed.gz"
+    #BED_GENCODE = "/home/aiokada/sandbox/onebreak/database/GENCODE/gencode.v40.annotation.bed.gz"
+    #CLINVAR_FILE = "/home/aiokada/sandbox/onebreak/database/CLINVAR/clinvar.truncating_pathogenic_gene.txt"
+    #input = "/home/aiokada/sandbox/onebreak/output/ERP001942_0.1.0b8_control_full/merge/merge.onebreak-mei.txt"
+    #output = "/home/aiokada/sandbox/onebreak/output/ERP001942_0.1.0b8_control_full/merge/merge.onebreak-mei.annot.txt"
+    #annotation(input, output, BED_MANE, BED_GENCODE, CLINVAR_FILE)

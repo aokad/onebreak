@@ -258,7 +258,14 @@ def create_parser():
     mei.add_argument("output_file", metavar = "output_file", type = str,
                           help = "path to output file")
 
-    mei.add_argument("--debug", default = False, action = 'store_true', help = "keep intermediate files")
+    mei.add_argument("bed_mane", metavar = "bed_mane", type = str,
+                          help = "path to bed_mane file")
+
+    mei.add_argument("bed_gencode", metavar = "bed_gencode", type = str,
+                          help = "path to bed_gencode file")
+
+    mei.add_argument("clinvar_file", metavar = "clinvar_file", type = str,
+                          help = "path to clinvar file")
 
     mei.set_defaults(func = mei_main)
     ###
