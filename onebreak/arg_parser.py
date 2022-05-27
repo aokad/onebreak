@@ -252,8 +252,8 @@ def create_parser():
     mei = subparsers.add_parser("mei",
                                help = "mobile element insertions")
 
-    mei.add_argument("contig_result_file", metavar = "contig_result_file", type = str,
-                          help = "path to contig function result file")
+    mei.add_argument("classify_result_file", metavar = "classify_result_file", type = str,
+                          help = "path to classify function result file")
 
     mei.add_argument("output_file", metavar = "output_file", type = str,
                           help = "path to output file")
