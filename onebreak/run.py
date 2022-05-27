@@ -180,5 +180,8 @@ def classify_main(args):
 
 def mei_main(args):
 
-    mei.generate_mei(args.contig_result_file, args.output_file + "tmp1.txt", debug = args.debug)
-    mei.annotation(args.output_file, args.output_file, args.bed_mane, args.bed_gencode, args.clinvar_file)
+    mei.generate_mei(args.contig_result_file, args.output_file + ".tmp1.txt", debug = args.debug)
+    mei.annotation(args.output_file, args.output_file, args.bed_mane, args.bed_gencode, args.clinvar_file, debug = args.debug)
+
+    if not args.debug:
+        subprocess.call(["rm", args.output_file + ".tmp1.txt"])

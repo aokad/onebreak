@@ -181,7 +181,7 @@ def tabix(bed_file, region):
         raise Exception(";".join(ret_value))
     return ret_value[0]
 
-def annotation(input, output_file, bed_mane, bed_gencode, clinvar_file):
+def annotation(input, output_file, bed_mane, bed_gencode, clinvar_file, debug = False):
 
     clinvar = {}
     for l in open(clinvar_file):

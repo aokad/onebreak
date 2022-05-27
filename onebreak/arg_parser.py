@@ -267,6 +267,8 @@ def create_parser():
     mei.add_argument("clinvar_file", metavar = "clinvar_file", type = str,
                           help = "path to clinvar file")
 
+    mei.add_argument("--debug", default = False, action = 'store_true', help = "keep intermediate files")
+
     mei.set_defaults(func = mei_main)
     ###
 

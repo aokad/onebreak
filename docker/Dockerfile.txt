@@ -103,8 +103,8 @@ RUN cd /usr/local/RepeatMasker && \
 
 # COPY EBbreak_modified.tar.gz /
 
-RUN wget -q https://github.com/aokad/onebreak/archive/refs/tags/v0.1.0b8.zip && \
-    unzip v0.1.0b8.zip && \
-    rm v0.1.0b8.zip && \
-    cd onebreak-0.1.0b8 && \
+RUN wget -q https://github.com/aokad/onebreak/archive/refs/tags/v0.1.0b10.zip && \
+    unzip v0.1.0b10.zip && \
+    rm v0.1.0b10.zip && \
+    cd onebreak-0.1.0b10 && \
     pip3 install .
