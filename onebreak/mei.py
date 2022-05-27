@@ -181,7 +181,7 @@ def tabix(bed_file, region):
         raise Exception(";".join(ret_value))
     return ret_value[0]
 
-def annotation(input, output_file, bed_mane, bed_gencode, clinvar_file, debug = False):
+def annotation(input_file, output_file, bed_mane, bed_gencode, clinvar_file, debug = False):
 
     clinvar = {}
     for l in open(clinvar_file):
@@ -193,7 +193,7 @@ def annotation(input, output_file, bed_mane, bed_gencode, clinvar_file, debug = 
                 clinvar[key] = F
 
     hout = open(output_file, 'w')
-    with open(sv_list_file, 'r') as hin:
+    with open(input_file, 'r') as hin:
         header = hin.readline().rstrip('\n').split('\t')
         header = header + ['annotChr', 'annotStart', 'annotEnd', 'annotNAME', 'annotLen', 'annotStrand', 'annotGene', 'annotMANE', 'clinvarGene', 'clinvarInfo']
         print('\t'.join(header), file = hout)
