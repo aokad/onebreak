@@ -158,7 +158,7 @@ def generate_contig(input_file, output_file, tumor_bam, reference_genome, min_co
         subprocess.call(["rm", "-rf", output_file + ".tmp2.contig.sorted"])
         subprocess.call(["rm", "-rf", output_file + ".tmp2.contig.unsorted"])
 
-def filt_contig(input_file, output_file, reference_genome, parasail_refseq_length = 200, parasail_contig_post_bp_length = 25, parasail_score_thres = 45, debug = False):
+def filt_contig(input_file, output_file, reference_genome, parasail_refseq_length = 1000, parasail_contig_post_bp_length = 25, parasail_score_thres = 45, debug = False):
 
     match = 2
     mismatch = -1
@@ -168,7 +168,7 @@ def filt_contig(input_file, output_file, reference_genome, parasail_refseq_lengt
     with open(input_file) as hin:
 
         header = hin.readline().rstrip('\n').split('\t')
-        print('\t'.join(header + ['ScoreIndel']), file = hout)
+        print('\t'.join(header + ['ScoreIndel', 'ScoreIndel_SeqType']), file = hout)
 
         header2ind = {}
         for (i, cname) in enumerate(header):
@@ -183,15 +183,28 @@ def filt_contig(input_file, output_file, reference_genome, parasail_refseq_lengt
                     temp_contig_post_bp= temp_contig_post_bp[:parasail_contig_post_bp_length]
                 temp_ref_seq = my_seq.get_seq(reference_genome, F[0], int(F[1]) - parasail_refseq_length, int(F[1]) + parasail_refseq_length)
                 aln_1 = parasail.ssw(temp_ref_seq, temp_contig_post_bp, 1, 1, user_matrix)
-                #hout.write(line.rstrip('\n') + "\t" + "\t".join(["%d" % (aln_1.score1), temp_contig_post_bp, temp_ref_seq]) + "\n")
-                hout.write(line.rstrip('\n') + "\t" + "\t".join(["%d" % (aln_1.score1)]) + "\n")
+                aln_2 = parasail.ssw(temp_ref_seq, my_seq.reverse_complement(temp_contig_post_bp), 1, 1, user_matrix)
+                aln_score = aln_1.score1
+                aln_id = "normal"
+                if aln_score < aln_2.score1:
+                    aln_score = aln_2.score1
+                    aln_id = "reverse_complement"
+                #hout.write(line.rstrip('\n') + "\t" + "\t".join(["%d" % (aln_score), "%d" % (aln_1.score1), "%d" % (aln_2.score1), aln_id, temp_contig_post_bp, my_seq.reverse_complement(temp_contig_post_bp), temp_ref_seq]) + "\n")
+                hout.write(line.rstrip('\n') + "\t" + "\t".join(["%d" % (aln_score), aln_id]) + "\n")
             else:
-                hout.write(line.rstrip('\n') + "\t" + "\t".join(["0"]) + "\n")
+                hout.write(line.rstrip('\n') + "\t" + "\t".join(["---", "---"]) + "\n")
     hout.close()
 
 if __name__ == '__main__':
     pass
-    #input_file = "/home/aiokada/sandbox/onebreak/output/ERP001942_0.1.0b9_control_full/ERR188022/ERR188022.onebreak-contig.txt"
-    #output_file = "/home/aiokada/sandbox/onebreak/output/ERP001942_0.1.0b10_control_full/ERR188022/ERR188022.onebreak-contig.txt"
     #reference_genome = "/home/aiokada/resources/database/GRCh38.d1.vd1/GRCh38.d1.vd1.fa"
-    #filt_contig(input_file, output_file, reference_genome, parasail_refseq_length = 200, parasail_contig_post_bp_length = 25, parasail_score_thres = 45, debug = False)
+    #
+    ##input_file = "/home/aiokada/sandbox/onebreak/output/ERP001942_0.1.0b10_control_full/ERR188182/ERR188182.onebreak-contig.txt"
+    ##output_file = "/home/aiokada/sandbox/onebreak/output/ERP001942_0.1.0b10_control_full/ERR188182/ERR188182.onebreak-contig2.txt"
+    ##filt_contig(input_file, output_file, reference_genome, parasail_refseq_length = 200, parasail_contig_post_bp_length = 25, parasail_score_thres = 45, debug = False)
+    #
+    #for sample in open("bams.txt").read().split("\n"):
+    #    input_file = "/home/aiokada/sandbox/onebreak/output/ERP001942_0.1.0b10_control_full/%s/%s.onebreak-contig.txt" % (sample, sample)
+    #    output_file = "/home/aiokada/sandbox/onebreak/output/ERP001942_0.1.0b10_control_full/%s/%s.onebreak-contig3.txt" % (sample, sample)
+    #    filt_contig(input_file, output_file, reference_genome, parasail_refseq_length = 1000, parasail_contig_post_bp_length = 25, parasail_score_thres = 45, debug = False)
+

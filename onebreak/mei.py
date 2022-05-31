@@ -221,8 +221,8 @@ def annotation(input_file, output_file, bed_mane, bed_gencode, clinvar_file, deb
 if __name__ == '__main__':
     pass
 
-    #sv_list_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/TCGA-2H-A9GG-01A-11R-A37I-31/TCGA-2H-A9GG-01A-11R-A37I-31.onebreak-contig.txt"
-    #output_file = "/home/aiokada/sandbox/onebreak/output/TCGA-ESCA_0.1.0b7/TCGA-2H-A9GG-01A-11R-A37I-31/TCGA-2H-A9GG-01A-11R-A37I-31.onebreak-mei.txt"
+    #sv_list_file = "/home/aiokada/sandbox/onebreak/output/ERP001942_0.1.0b10_control_full/ERR188022/ERR188022.onebreak-classify.txt"
+    #output_file = "/home/aiokada/sandbox/onebreak/output/ERP001942_0.1.0b10_control_full/ERR188022/ERR188022.onebreak-mei.txt"
     #generate_mei(sv_list_file, output_file, debug = True)
 
     ## annotation
